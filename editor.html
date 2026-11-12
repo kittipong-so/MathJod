@@ -87,7 +87,7 @@
       font-weight: 500;
     }
 
-    /* Clear Button replacing keyboard button in the header */
+    /* Clear Button in header */
     .btn-clear {
       font-size: 12px;
       font-family: inherit;
@@ -151,7 +151,7 @@
       background: #ffffff;
     }
 
-    /* Virtual Keyboard Toggle moved to Ribbon Tabs bar */
+    /* Virtual Keyboard Toggle in Tab Bar */
     .tab-action-btn {
       font-size: 12px;
       font-family: inherit;
@@ -253,10 +253,10 @@
     /* Editor Body */
     main {
       flex: 1;
-      padding: 18px;
+      padding: 16px 18px;
       display: flex;
       flex-direction: column;
-      gap: 14px;
+      gap: 12px;
       overflow-y: auto;
     }
 
@@ -293,7 +293,7 @@
       box-shadow: 0 0 0 1px var(--border-focus);
     }
 
-    /* CSS enhancement for empty matrix cells */
+    /* Empty matrix cells dashed outline */
     math-field::part(content) .ML__cell:empty,
     math-field::part(content) td:empty {
       min-width: 1.2em;
@@ -303,6 +303,17 @@
       border-radius: 2px;
       vertical-align: middle;
       margin: 2px;
+    }
+
+    /* Status & Error notice inside dialog */
+    .dialog-notice {
+      display: none;
+      padding: 8px 12px;
+      border-radius: var(--radius);
+      font-size: 12px;
+      background: var(--danger-bg);
+      color: var(--danger);
+      border: 1px solid #f5c6cb;
     }
 
     /* Raw LaTeX display */
@@ -363,8 +374,14 @@
       box-shadow: 0 1px 2px rgba(0,0,0,0.1);
     }
 
-    .btn-primary:hover {
+    .btn-primary:hover:not(:disabled) {
       background: var(--primary-hover);
+    }
+
+    .btn-primary:disabled {
+      background: #c8c6c4;
+      cursor: not-allowed;
+      box-shadow: none;
     }
   </style>
 </head>
@@ -379,24 +396,30 @@
       <h1>MathType Equation Editor</h1>
     </div>
 
-    <!-- <div class="header-controls">
+    <div class="header-controls">
       <span id="editorModeTag" class="mode-tag">New Equation</span>
-      <button id="btnToggleKeyboard" class="btn-kbd">⌨ Keyboard</button>
+      <button id="btnClear" class="btn-clear" title="Clear current equation">Clear</button>
     </div>
   </header>
 
   <!-- Upper Tab Navigation Bar with Virtual Keyboard Button -->
   <nav class="ribbon-tabs">
-    <button class="tab-btn active" data-tab="tab-insert">Insert</button>
-    <button class="tab-btn" data-tab="tab-matrix">Matrix</button>
-    <button class="tab-btn" data-tab="tab-style">Font &amp; Style</button>
-    <button class="tab-btn" data-tab="tab-color">Colors</button>
-    <button class="tab-btn" data-tab="tab-edit">Edit</button>
+    <div class="tab-buttons">
+      <button class="tab-btn active" data-tab="tab-insert">Insert</button>
+      <button class="tab-btn" data-tab="tab-matrix">Matrix</button>
+      <button class="tab-btn" data-tab="tab-style">Font &amp; Style</button>
+      <button class="tab-btn" data-tab="tab-color">Colors</button>
+      <button class="tab-btn" data-tab="tab-edit">Edit</button>
+    </div>
+
+    <!-- Virtual Keyboard Toggle Button -->
+    <button id="btnToggleKeyboard" class="tab-action-btn" title="Toggle On-Screen Virtual Keyboard">
+      ⌨ Virtual Keyboard
+    </button>
   </nav>
 
   <!-- 1. Insert Panel -->
   <div id="tab-insert" class="ribbon-panel active">
-    <!-- Basic structures -->
     <button class="tool-btn" data-cmd="insert" data-arg="\frac{#?}{#?}" title="Fraction: a/b">a/b</button>
     <button class="tool-btn" data-cmd="insert" data-arg="#?^{#?}" title="Power: x^y">xʸ</button>
     <button class="tool-btn" data-cmd="insert" data-arg="#?_{#?}" title="Subscript: x_y">xᵧ</button>
@@ -405,7 +428,6 @@
     
     <div class="tool-divider"></div>
 
-    <!-- Delimiters -->
     <button class="tool-btn" data-cmd="insert" data-arg="\left( #? \right)" title="Parentheses: ( )">(·)</button>
     <button class="tool-btn" data-cmd="insert" data-arg="\left[ #? \right]" title="Brackets: [ ]">[·]</button>
     <button class="tool-btn" data-cmd="insert" data-arg="\left\{ #? \right\}" title="Braces: { }">{·}</button>
@@ -413,7 +435,6 @@
 
     <div class="tool-divider"></div>
 
-    <!-- Calculus -->
     <button class="tool-btn" data-cmd="insert" data-arg="\int_{#?}^{#?} #? \,d#?" title="Definite Integral">∫</button>
     <button class="tool-btn" data-cmd="insert" data-arg="\sum_{#?}^{#?} #?" title="Summation">∑</button>
     <button class="tool-btn" data-cmd="insert" data-arg="\prod_{#?}^{#?} #?" title="Product">∏</button>
@@ -421,7 +442,6 @@
 
     <div class="tool-divider"></div>
 
-    <!-- Symbols -->
     <button class="tool-btn" data-cmd="insert" data-arg="\pm" title="Plus-Minus: ±">±</button>
     <button class="tool-btn" data-cmd="insert" data-arg="\times" title="Multiplication: ×">×</button>
     <button class="tool-btn" data-cmd="insert" data-arg="\div" title="Division: ÷">÷</button>
@@ -508,14 +528,12 @@
   <!-- Main MathLive Canvas -->
   <main>
     <div class="editor-label">
-      <div>
-        <span>Visual Math Canvas</span>
-        <!-- Clear button (Replaced Virtual Keyboard in the header) -->
-      <button id="btnClear" class="btn-clear" title="Clear current equation">Clear</button>
-      </div>
-      
+      <span>Visual Math Canvas</span>
       <span style="font-weight: normal; text-transform: none;">Click or tap to edit visually</span>
     </div>
+
+    <!-- Notice banner for errors -->
+    <div id="dialogNotice" class="dialog-notice"></div>
 
     <!-- MathLive Web Component -->
     <math-field id="mathField" smart-mode="true" virtual-keyboard-mode="manual"></math-field>
@@ -538,6 +556,12 @@
   </footer>
 
   <script>
+    // Universal Office initialization shim
+    window.Office = window.Office || {};
+    Office.initialize = function () {
+      console.log('Office.initialize in dialog triggered');
+    };
+
     const mathField = document.getElementById('mathField');
     const latexOutput = document.getElementById('latexOutput');
     const btnInsert = document.getElementById('btnInsert');
@@ -546,6 +570,16 @@
     const btnClear = document.getElementById('btnClear');
     const btnToggleKeyboard = document.getElementById('btnToggleKeyboard');
     const editorModeTag = document.getElementById('editorModeTag');
+    const dialogNotice = document.getElementById('dialogNotice');
+
+    function showNotice(msg) {
+      if (!dialogNotice) return;
+      dialogNotice.textContent = msg;
+      dialogNotice.style.display = 'block';
+      setTimeout(() => {
+        dialogNotice.style.display = 'none';
+      }, 5000);
+    }
 
     /**
      * Update synchronized LaTeX string display
@@ -556,17 +590,78 @@
     }
 
     /**
-     * Send message back to Task Pane Hub via Office Dialog API
+     * Resilient Multi-Channel Messenger to Parent Window
      */
     function sendToParent(action, latex = '') {
-      if (typeof Office !== 'undefined' && Office.context && Office.context.ui && Office.context.ui.messageParent) {
-        Office.context.ui.messageParent(JSON.stringify({
-          action: action,
-          latex: latex
-        }));
-      } else {
-        console.warn('Office.context.ui.messageParent is not available.');
+      const payloadString = JSON.stringify({
+        action: action,
+        latex: latex,
+        timestamp: Date.now()
+      });
+
+      console.log('sendToParent invoked with:', action);
+
+      let dispatched = false;
+
+      // 1. Primary: Office Dialog API messageParent
+      try {
+        if (typeof Office !== 'undefined' && Office.context && Office.context.ui && typeof Office.context.ui.messageParent === 'function') {
+          Office.context.ui.messageParent(payloadString);
+          console.log('Dispatched via Office.context.ui.messageParent');
+          dispatched = true;
+        }
+      } catch (err) {
+        console.warn('Office.context.ui.messageParent failed:', err);
       }
+
+      // 2. Secondary: postMessage to opener or parent window
+      try {
+        if (window.opener && typeof window.opener.postMessage === 'function') {
+          window.opener.postMessage(payloadString, '*');
+          console.log('Dispatched via window.opener.postMessage');
+          dispatched = true;
+        }
+        if (window.parent && window.parent !== window && typeof window.parent.postMessage === 'function') {
+          window.parent.postMessage(payloadString, '*');
+          console.log('Dispatched via window.parent.postMessage');
+          dispatched = true;
+        }
+      } catch (err) {
+        console.warn('postMessage failed:', err);
+      }
+
+      // 3. Tertiary: BroadcastChannel
+      try {
+        if (typeof BroadcastChannel !== 'undefined') {
+          const channel = new BroadcastChannel('mathtype_bridge_channel');
+          channel.postMessage(payloadString);
+          channel.close();
+          console.log('Dispatched via BroadcastChannel');
+          dispatched = true;
+        }
+      } catch (err) {
+        console.warn('BroadcastChannel failed:', err);
+      }
+
+      // 4. Quaternary: LocalStorage Event Bus
+      try {
+        localStorage.setItem('mathtype_dialog_bridge', payloadString);
+        console.log('Dispatched via localStorage bridge');
+        dispatched = true;
+      } catch (err) {
+        console.warn('localStorage bridge failed:', err);
+      }
+
+      // If user clicked cancel, attempt closing window as local fallback
+      if (action === 'cancel') {
+        setTimeout(() => {
+          try {
+            window.close();
+          } catch (_) {}
+        }, 150);
+      }
+
+      return dispatched;
     }
 
     /**
@@ -596,7 +691,6 @@
     function handleMatrixModification(action) {
       mathField.executeCommand(action);
 
-      // If adding a column or row, ensure any empty cells are filled with \placeholder{}
       if (action === 'addColumnAfter' || action === 'addColumnBefore' || action === 'addRowAfter' || action === 'addRowBefore') {
         const currentTex = mathField.getValue();
         const filledTex = fillEmptyMatrixCells(currentTex);
@@ -709,7 +803,9 @@
     /**
      * Initialize on Office.onReady
      */
-    Office.onReady(() => {
+    Office.onReady((info) => {
+      console.log('Office.onReady resolved in editor dialog. Host:', info ? info.host : 'unknown');
+
       // Hide default corner menu
       try {
         mathField.menuItems = [];
@@ -725,7 +821,6 @@
         editorModeTag.textContent = 'Edit Mode';
         btnInsertText.textContent = 'Update Equation';
       } else {
-        // Blank canvas by default for New Equation
         mathField.value = '';
         editorModeTag.textContent = 'New Equation';
         btnInsertText.textContent = 'Insert into Document';
@@ -745,11 +840,19 @@
     // Insert button click
     btnInsert.addEventListener('click', () => {
       const latex = mathField.value.trim();
+      if (!latex) {
+        showNotice('The equation is empty. Please enter an equation or click Cancel.');
+        return;
+      }
+
+      btnInsert.disabled = true;
+      btnInsertText.textContent = 'Inserting...';
       sendToParent('insert', latex);
     });
 
     // Cancel button click
     btnCancel.addEventListener('click', () => {
+      btnCancel.disabled = true;
       sendToParent('cancel');
     });
 
@@ -758,7 +861,9 @@
       if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
         e.preventDefault();
         const latex = mathField.value.trim();
-        sendToParent('insert', latex);
+        if (latex) {
+          sendToParent('insert', latex);
+        }
       } else if (e.key === 'Escape') {
         sendToParent('cancel');
       }
