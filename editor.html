@@ -788,14 +788,6 @@
     });
 
     /**
-     * Virtual Keyboard Toggle Button (In Tabs bar)
-     */
-    btnToggleKeyboard.addEventListener('click', () => {
-      mathField.executeCommand(['toggleVirtualKeyboard']);
-      mathField.focus();
-    });
-
-    /**
      * Clear Button (In Header)
      */
     btnClear.addEventListener('click', () => {
@@ -822,11 +814,11 @@
       if (initialLatex) {
         const decoded = decodeURIComponent(initialLatex);
         mathField.value = decoded;
-        editorModeTag.textContent = 'Edit Mode';
+        if (editorModeTag) editorModeTag.textContent = 'Edit Mode';
         btnInsertText.textContent = 'Update Equation';
       } else {
         mathField.value = '';
-        editorModeTag.textContent = 'New Equation';
+        if (editorModeTag) editorModeTag.textContent = 'New Equation';
         btnInsertText.textContent = 'Insert into Document';
       }
 
