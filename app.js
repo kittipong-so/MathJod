@@ -1,164 +1,53 @@
 /**
- * MathType Clone - Microsoft Word Task Pane Add-in
- * Pure client-side LaTeX -> MathML -> OMML -> OOXML equation editor
+ * MathType Clone - Task Pane Hub & Picture-Object Controller
+ * Implements traditional MathType workflow with Office Dialog API,
+ * MathLive interactive editing, and Base64 PNG + AltText persistence.
  */
 
-// Global converter instance
-let mml2ommlConverter = null;
+const LATEX_ALT_PREFIX = '[MathType:LaTeX] ';
+
+// State
 let isWordHost = false;
+let currentDialog = null;
+let selectedEquationLatex = null;
+let isUpdatingExisting = false;
 
 // DOM Elements
-const latexInput = document.getElementById('latexInput');
-const previewContainer = document.getElementById('previewContainer');
-const errorContainer = document.getElementById('errorContainer');
-const btnInsert = document.getElementById('btnInsert');
-const insertBtnText = document.getElementById('insertBtnText');
-const insertSpinner = document.getElementById('insertSpinner');
-const insertIcon = document.getElementById('insertIcon');
+const btnEditMath = document.getElementById('btnEditMath');
+const btnNewMath = document.getElementById('btnNewMath');
+const selectionCard = document.getElementById('selectionCard');
+const selectionPill = document.getElementById('selectionPill');
+const selectionDesc = document.getElementById('selectionDesc');
+const selectedEquationBox = document.getElementById('selectedEquationBox');
 const statusBanner = document.getElementById('statusBanner');
-const presetSelect = document.getElementById('presetSelect');
-const btnClear = document.getElementById('btnClear');
 const wordStatusBadge = document.getElementById('wordStatusBadge');
 const wordStatusText = document.getElementById('wordStatusText');
-const mathModeRadios = document.querySelectorAll('input[name="mathMode"]');
+const renderSandbox = document.getElementById('renderSandbox');
 
 /**
- * Initialize converter from CDN (with unpkg fallback)
+ * Extract LaTeX string from an image's Alt Text Description
  */
-async function loadConverter() {
-  if (mml2ommlConverter) return mml2ommlConverter;
-  try {
-    const mod = await import('https://cdn.jsdelivr.net/npm/mathml2omml/+esm');
-    mml2ommlConverter = mod.mml2omml;
-    return mml2ommlConverter;
-  } catch (err) {
-    console.warn('Failed loading mathml2omml from jsDelivr, attempting unpkg fallback...', err);
+function extractLatexFromAltText(altText) {
+  if (!altText) return null;
+
+  // Check prefix format: [MathType:LaTeX] <latex>
+  if (altText.startsWith(LATEX_ALT_PREFIX)) {
+    return altText.substring(LATEX_ALT_PREFIX.length).trim();
+  }
+
+  // Check JSON format fallback
+  if (altText.startsWith('{') && altText.includes('"latex"')) {
     try {
-      const mod = await import('https://unpkg.com/mathml2omml/dist/index.js');
-      mml2ommlConverter = mod.mml2omml;
-      return mml2ommlConverter;
-    } catch (fallbackErr) {
-      console.error('Failed loading mathml2omml from all CDNs:', fallbackErr);
-      throw new Error('MathML to OMML converter could not be loaded.');
-    }
+      const data = JSON.parse(altText);
+      return data.latex || null;
+    } catch (_) {}
   }
+
+  return null;
 }
 
 /**
- * Clean KaTeX MathML output into pure MathML for OMML conversion
- */
-function cleanKaTeXMathML(rawMathML) {
-  let mathml = rawMathML;
-
-  // Extract the root <math>...</math> tag
-  const mathMatch = mathml.match(/<math[\s\S]*?<\/math>/i);
-  if (mathMatch) {
-    mathml = mathMatch[0];
-  }
-
-  // Strip KaTeX <annotation> tag containing raw TeX source
-  mathml = mathml.replace(/<annotation[\s\S]*?<\/annotation>/gi, '');
-
-  // Strip <semantics> wrapper if present
-  mathml = mathml.replace(/<semantics>/gi, '').replace(/<\/semantics>/gi, '');
-
-  // Ensure MathML namespace is properly declared
-  if (!mathml.includes('xmlns="http://www.w3.org/1998/Math/MathML"')) {
-    mathml = mathml.replace('<math', '<math xmlns="http://www.w3.org/1998/Math/MathML"');
-  }
-
-  return mathml.trim();
-}
-
-/**
- * Build a valid Office Open XML (OOXML) Flat OPC package string containing OMML
- */
-function buildOoxmlPackage(ommlString, isDisplay = true) {
-  // Wrap in <m:oMathPara> for display (centered block) or use <m:oMath> for inline
-  const mathBlock = isDisplay
-    ? `<m:oMathPara>${ommlString}</m:oMathPara>`
-    : ommlString;
-
-  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<?mso-application progid="Word.Document"?>
-<pkg:package xmlns:pkg="http://schemas.microsoft.com/office/2006/xmlPackage">
-  <pkg:part pkg:name="/_rels/.rels" pkg:contentType="application/vnd.openxmlformats-package.relationships+xml" pkg:padding="512">
-    <pkg:xmlData>
-      <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-        <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
-      </Relationships>
-    </pkg:xmlData>
-  </pkg:part>
-  <pkg:part pkg:name="/word/document.xml" pkg:contentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml">
-    <pkg:xmlData>
-      <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
-                  xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math">
-        <w:body>
-          <w:p>
-            ${mathBlock}
-          </w:p>
-        </w:body>
-      </w:document>
-    </pkg:xmlData>
-  </pkg:part>
-</pkg:package>`;
-}
-
-/**
- * Get selected math format mode (display or inline)
- */
-function isDisplayMode() {
-  const checked = document.querySelector('input[name="mathMode"]:checked');
-  return checked ? checked.value === 'display' : true;
-}
-
-/**
- * Render LaTeX in real-time using KaTeX
- */
-function updatePreview() {
-  const latex = latexInput.value.trim();
-
-  // If input is empty, show default placeholder
-  if (!latex) {
-    previewContainer.innerHTML = '<span class="preview-placeholder">Live preview will appear here...</span>';
-    errorContainer.style.display = 'none';
-    btnInsert.disabled = true;
-    return;
-  }
-
-  try {
-    if (typeof katex === 'undefined') {
-      previewContainer.textContent = latex;
-      return;
-    }
-
-    // Render KaTeX with displayMode setting
-    katex.render(latex, previewContainer, {
-      displayMode: isDisplayMode(),
-      throwOnError: true
-    });
-
-    errorContainer.style.display = 'none';
-    btnInsert.disabled = false;
-  } catch (err) {
-    // Show syntax error without breaking the interface
-    errorContainer.textContent = err.message || 'LaTeX syntax error';
-    errorContainer.style.display = 'block';
-
-    // Attempt a tolerant render so user sees partial progress
-    try {
-      katex.render(latex, previewContainer, {
-        displayMode: isDisplayMode(),
-        throwOnError: false
-      });
-    } catch (_) {
-      // Ignore fallback errors
-    }
-  }
-}
-
-/**
- * Show temporary status message banner
+ * Display visual status banner in the Hub UI
  */
 function showStatus(message, type = 'success', duration = 4000) {
   statusBanner.textContent = message;
@@ -173,136 +62,289 @@ function showStatus(message, type = 'success', duration = 4000) {
 }
 
 /**
- * Insert LaTeX snippet into textarea at current cursor position
+ * Update the Hub UI based on whether an editable equation is selected in Word
  */
-function insertSnippet(snippet) {
-  const startPos = latexInput.selectionStart;
-  const endPos = latexInput.selectionEnd;
-  const currentValue = latexInput.value;
+function updateSelectionUI(latex = null) {
+  if (latex) {
+    selectedEquationLatex = latex;
+    btnEditMath.disabled = false;
+    btnEditMath.title = 'Edit the currently selected equation';
 
-  const newValue = currentValue.substring(0, startPos) + snippet + currentValue.substring(endPos);
-  latexInput.value = newValue;
+    selectionCard.className = 'selection-card active';
+    selectionPill.className = 'selection-pill active';
+    selectionPill.textContent = 'Equation Selected';
+    selectionDesc.textContent = 'Found editable MathType equation in document:';
 
-  // Move cursor to sensible position inside brackets if present
-  let newCursorPos = startPos + snippet.length;
-  const firstBrace = snippet.indexOf('{');
-  if (firstBrace !== -1) {
-    newCursorPos = startPos + firstBrace + 1;
+    selectedEquationBox.textContent = latex;
+    selectedEquationBox.style.display = 'block';
+  } else {
+    selectedEquationLatex = null;
+    btnEditMath.disabled = true;
+    btnEditMath.title = 'Select an equation in the document to edit';
+
+    selectionCard.className = 'selection-card';
+    selectionPill.className = 'selection-pill';
+    selectionPill.textContent = 'No Equation';
+    selectionDesc.textContent = 'Click on any equation picture in your Word document to select and edit it.';
+
+    selectedEquationBox.textContent = '';
+    selectedEquationBox.style.display = 'none';
   }
-
-  latexInput.focus();
-  latexInput.setSelectionRange(newCursorPos, newCursorPos);
-  updatePreview();
 }
 
 /**
- * Convert LaTeX to OMML via MathML and insert OOXML into Word
+ * Selection Event Listener: Checks if the user clicked on an equation picture
  */
-async function insertEquationIntoWord() {
-  const latex = latexInput.value.trim();
-  if (!latex) return;
-
-  // UI loading state
-  btnInsert.disabled = true;
-  insertSpinner.style.display = 'inline-block';
-  insertIcon.style.display = 'none';
-  insertBtnText.textContent = 'Inserting...';
+async function onDocumentSelectionChanged() {
+  if (!isWordHost || typeof Word === 'undefined') return;
 
   try {
-    // 1. Generate MathML from LaTeX using KaTeX client-side
-    const rawMathML = katex.renderToString(latex, {
-      output: 'mathml',
-      throwOnError: false
+    await Word.run(async (context) => {
+      const selection = context.document.getSelection();
+      const inlinePictures = selection.inlinePictures;
+      inlinePictures.load('items/altTextDescription, items/altTextTitle');
+
+      await context.sync();
+
+      if (inlinePictures.items && inlinePictures.items.length > 0) {
+        // Inspect the first picture in the selection
+        const pic = inlinePictures.items[0];
+        const latex = extractLatexFromAltText(pic.altTextDescription);
+
+        if (latex) {
+          updateSelectionUI(latex);
+          return;
+        }
+      }
+
+      // No equation image is selected
+      updateSelectionUI(null);
     });
+  } catch (err) {
+    console.warn('Selection check warning:', err);
+  }
+}
 
-    const cleanMathML = cleanKaTeXMathML(rawMathML);
+/**
+ * Open the interactive MathLive editor using Office Dialog API
+ */
+function openEditorDialog(initialLatex = null) {
+  isUpdatingExisting = Boolean(initialLatex);
 
-    // 2. Convert MathML to OMML using mathml2omml
-    const converter = await loadConverter();
-    const omml = converter(cleanMathML);
+  // Construct absolute dialog URL (hosted alongside index.html)
+  const dialogUrl = new URL('editor.html', window.location.href);
+  if (initialLatex) {
+    dialogUrl.searchParams.set('latex', encodeURIComponent(initialLatex));
+  }
 
-    if (!omml || !omml.includes('<m:oMath')) {
-      throw new Error('Failed to generate valid Office Math (OMML) from equation.');
+  // Office Dialog API options (65% height, 60% width)
+  const options = {
+    height: 65,
+    width: 60,
+    displayInIframe: false
+  };
+
+  Office.context.ui.displayDialogAsync(dialogUrl.href, options, (asyncResult) => {
+    if (asyncResult.status === Office.AsyncResultStatus.Failed) {
+      console.error('Failed to open dialog:', asyncResult.error.message);
+      showStatus(`Failed to open equation editor: ${asyncResult.error.message}`, 'error', 6000);
+      return;
     }
 
-    // 3. Wrap OMML inside Word's Flat OPC OOXML package
-    const ooxml = buildOoxmlPackage(omml, isDisplayMode());
+    currentDialog = asyncResult.value;
 
-    // 4. Insert into Word using Office.js
+    // Register message and event handlers
+    currentDialog.addEventHandler(Office.EventType.DialogMessageReceived, onDialogMessage);
+    currentDialog.addEventHandler(Office.EventType.DialogEventReceived, onDialogEvent);
+  });
+}
+
+/**
+ * Handle messages sent from the Dialog via messageParent
+ */
+async function onDialogMessage(arg) {
+  try {
+    const data = JSON.parse(arg.message);
+
+    if (data.action === 'insert') {
+      if (currentDialog) {
+        currentDialog.close();
+        currentDialog = null;
+      }
+      await processAndInsertEquation(data.latex);
+    } else if (data.action === 'cancel') {
+      if (currentDialog) {
+        currentDialog.close();
+        currentDialog = null;
+      }
+    }
+  } catch (err) {
+    console.error('Error handling dialog message:', err);
+  }
+}
+
+/**
+ * Handle dialog events (e.g. user clicked window close button)
+ */
+function onDialogEvent(arg) {
+  console.log('Dialog closed or event triggered:', arg.error);
+  currentDialog = null;
+}
+
+/**
+ * Convert LaTeX string into a high-DPI Base64 PNG image using MathJax SVG + Canvas
+ */
+async function renderLatexToBase64Png(latex) {
+  // Wait for MathJax to be available if still initializing
+  if (!window.MathJax || !window.MathJax.tex2svgPromise) {
+    throw new Error('MathJax rendering engine is not yet ready. Please try again.');
+  }
+
+  // Generate vector SVG node from LaTeX
+  const container = await window.MathJax.tex2svgPromise(latex, { display: true });
+  const svg = container.querySelector('svg');
+  if (!svg) throw new Error('Could not render SVG from LaTeX expression.');
+
+  // Clone SVG to isolate it
+  const clonedSvg = svg.cloneNode(true);
+  clonedSvg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+  clonedSvg.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
+
+  // Compute dimensions from SVG attributes or viewBox
+  const exWidth = parseFloat(clonedSvg.getAttribute('width')) || 6;
+  const exHeight = parseFloat(clonedSvg.getAttribute('height')) || 2;
+
+  // Conversion: ~10px per ex at standard font scaling
+  const baseWidthPx = Math.max(Math.round(exWidth * 10), 30);
+  const baseHeightPx = Math.max(Math.round(exHeight * 10), 16);
+
+  // High-DPI scale (3x) for razor-sharp appearance in Word
+  const renderScale = 3;
+  const canvasWidth = baseWidthPx * renderScale;
+  const canvasHeight = baseHeightPx * renderScale;
+
+  clonedSvg.setAttribute('width', canvasWidth);
+  clonedSvg.setAttribute('height', canvasHeight);
+
+  // Serialize SVG to base64 Data URL
+  const serializer = new XMLSerializer();
+  const svgString = serializer.serializeToString(clonedSvg);
+  const svgDataUrl = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgString)));
+
+  // Render SVG onto HTML5 Canvas to produce pure PNG
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = canvasWidth;
+      canvas.height = canvasHeight;
+      const ctx = canvas.getContext('2d');
+
+      // Draw vector SVG onto canvas
+      ctx.drawImage(img, 0, 0, canvasWidth, canvasHeight);
+
+      // Extract raw Base64 PNG string (without 'data:image/png;base64,' prefix for Word API)
+      const dataUrl = canvas.toDataURL('image/png');
+      const base64Png = dataUrl.replace(/^data:image\/png;base64,/, '');
+
+      // Word dimensions are specified in points (1 pt = 0.75 px)
+      const pointWidth = Math.round(baseWidthPx * 0.75);
+      const pointHeight = Math.round(baseHeightPx * 0.75);
+
+      resolve({
+        base64: base64Png,
+        pointWidth: pointWidth,
+        pointHeight: pointHeight
+      });
+    };
+
+    img.onerror = (e) => reject(new Error('Failed to rasterize equation into Canvas: ' + e));
+    img.src = svgDataUrl;
+  });
+}
+
+/**
+ * Render equation into Base64 image and inject into Word with LaTeX in AltText
+ */
+async function processAndInsertEquation(latex) {
+  if (!latex || !latex.trim()) {
+    showStatus('Equation was empty. Nothing inserted.', 'error');
+    return;
+  }
+
+  showStatus('Rendering and inserting equation...', 'success', 2000);
+
+  try {
+    // 1. Render LaTeX to high-DPI Base64 PNG
+    const { base64, pointWidth, pointHeight } = await renderLatexToBase64Png(latex);
+
+    // 2. Insert into Word document
     if (isWordHost && typeof Word !== 'undefined' && Word.run) {
       await Word.run(async (context) => {
         const selection = context.document.getSelection();
-        selection.insertOoxml(ooxml, Word.InsertLocation.replace);
+
+        // Check if an existing picture is currently selected to replace
+        const pictures = selection.inlinePictures;
+        pictures.load('items/altTextDescription');
+        await context.sync();
+
+        let insertedPic;
+        if (pictures.items.length > 0 && extractLatexFromAltText(pictures.items[0].altTextDescription)) {
+          // Replace selected equation picture directly in place
+          const targetPic = pictures.items[0];
+          insertedPic = targetPic.insertInlinePictureFromBase64(base64, Word.InsertLocation.replace);
+        } else {
+          // Insert at cursor position
+          insertedPic = selection.insertInlinePictureFromBase64(base64, Word.InsertLocation.replace);
+        }
+
+        // 3. Store source LaTeX invisibly inside Alt Text Description
+        insertedPic.altTextTitle = 'MathType Equation';
+        insertedPic.altTextDescription = `${LATEX_ALT_PREFIX}${latex}`;
+
+        // Set typographical display dimensions
+        insertedPic.width = pointWidth;
+        insertedPic.height = pointHeight;
+        insertedPic.lockAspectRatio = true;
+
         await context.sync();
       });
 
-      showStatus('Equation successfully inserted into Word!', 'success');
-    } else {
-      // Browser preview mode (running outside Word)
-      console.log('Generated OOXML:\n', ooxml);
       showStatus(
-        'Preview mode: Word host not detected. Sideload this add-in inside Word to insert equations directly.',
-        'error',
-        6000
+        isUpdatingExisting ? 'Equation updated successfully!' : 'Equation inserted into document!',
+        'success'
       );
+
+      // Re-trigger selection check to sync Hub state
+      setTimeout(onDocumentSelectionChanged, 300);
+    } else {
+      // Browser preview mode
+      console.log('Base64 PNG Generated (first 100 chars):', base64.slice(0, 100));
+      console.log('AltText LaTeX Stored:', `${LATEX_ALT_PREFIX}${latex}`);
+      showStatus('Preview mode: Equation rendered. Sideload in Word to insert into document.', 'success', 5000);
     }
   } catch (err) {
-    console.error('Error inserting equation:', err);
-    showStatus(`Insertion failed: ${err.message || 'Unknown error'}`, 'error', 6000);
-  } finally {
-    // Restore UI state
-    btnInsert.disabled = false;
-    insertSpinner.style.display = 'none';
-    insertIcon.style.display = 'inline-block';
-    insertBtnText.textContent = 'Insert into Word';
+    console.error('Failed to process and insert equation:', err);
+    showStatus(`Failed: ${err.message || 'Unknown error'}`, 'error', 6000);
   }
 }
 
 /**
- * Attach UI event listeners
+ * Setup Hub UI Event Listeners
  */
 function setupEventListeners() {
-  // Real-time preview update on typing
-  latexInput.addEventListener('input', updatePreview);
-
-  // Math mode radio toggle (display vs inline)
-  mathModeRadios.forEach((radio) => {
-    radio.addEventListener('change', updatePreview);
-  });
-
-  // Palette button clicks
-  document.querySelectorAll('.math-btn').forEach((button) => {
-    button.addEventListener('click', () => {
-      const snippet = button.dataset.latex;
-      if (snippet) insertSnippet(snippet);
-    });
-  });
-
-  // Preset formula dropdown
-  presetSelect.addEventListener('change', (e) => {
-    if (e.target.value) {
-      latexInput.value = e.target.value;
-      updatePreview();
-      e.target.selectedIndex = 0;
+  // "Edit Math" button: opens editor with current selection's LaTeX
+  btnEditMath.addEventListener('click', () => {
+    if (selectedEquationLatex) {
+      openEditorDialog(selectedEquationLatex);
     }
   });
 
-  // Clear button
-  btnClear.addEventListener('click', () => {
-    latexInput.value = '';
-    latexInput.focus();
-    updatePreview();
-  });
-
-  // Main insert button
-  btnInsert.addEventListener('click', insertEquationIntoWord);
-
-  // Keyboard shortcut: Ctrl + Enter to insert
-  latexInput.addEventListener('keydown', (e) => {
-    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-      e.preventDefault();
-      insertEquationIntoWord();
-    }
+  // "New Equation" button: opens editor with blank/new template
+  btnNewMath.addEventListener('click', () => {
+    openEditorDialog(null);
   });
 }
 
@@ -310,24 +352,30 @@ function setupEventListeners() {
  * Office.js Initialization
  */
 Office.onReady((info) => {
-  // Check if running inside Word
   if (info && info.host === Office.HostType.Word) {
     isWordHost = true;
     wordStatusBadge.className = 'badge badge-online';
-    wordStatusText.textContent = 'Connected to Word';
+    wordStatusText.textContent = 'Connected';
+
+    // Register DocumentSelectionChanged listener for the editing loop
+    Office.context.document.addHandlerAsync(
+      Office.EventType.DocumentSelectionChanged,
+      onDocumentSelectionChanged,
+      (result) => {
+        if (result.status === Office.AsyncResultStatus.Failed) {
+          console.error('Failed to register DocumentSelectionChanged:', result.error.message);
+        }
+      }
+    );
+
+    // Initial check in case an equation is already selected upon opening
+    onDocumentSelectionChanged();
   } else {
     isWordHost = false;
     wordStatusBadge.className = 'badge badge-offline';
     wordStatusText.textContent = 'Preview Mode';
-    wordStatusBadge.title = 'Running in browser preview mode. Sideload in Word to insert equations.';
+    wordStatusBadge.title = 'Running in browser preview mode. Sideload in Word to enable document selection.';
   }
 
-  // Pre-load converter in background
-  loadConverter().catch((err) => console.warn('Preloading converter warning:', err));
-
-  // Setup UI events
   setupEventListeners();
-
-  // Initial preview check
-  updatePreview();
 });

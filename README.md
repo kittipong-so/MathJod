@@ -1,87 +1,61 @@
-# Microsoft Word Task Pane Add-in for Math Equations
+# MathType Clone - Traditional Picture-Object Architecture
 
-A client-side Microsoft Word Task Pane Add-in that allows users to type standard LaTeX mathematical equations, view real-time rendering previews via KaTeX, and insert them directly into Microsoft Word documents as native, fully-editable Word equations (OMML).
+A Microsoft Word Task Pane Add-in that implements the classic **MathType picture-object workflow**:
 
-Designed to run **100% client-side** without any Node.js or backend servers, making it ideal for hosting on **GitHub Pages**.
+1. **Hub Task Pane**: Simple, focused hub with a context-sensitive **"Edit Math"** button that automatically enables when an equation is selected in the Word document.
+2. **Interactive Editor (Office Dialog API)**: When clicking "Edit Math" or "New Equation", a floating dialog window opens powered by the **MathLive** WYSIWYG math editor.
+3. **Insertion & Persistence**: Equations are rasterized client-side into ultra-crisp 300+ DPI Base64 PNG images and inserted into the document using `context.document.getSelection().insertInlinePictureFromBase64()`. The source LaTeX is stored invisibly inside the image's `altTextDescription` attribute (`[MathType:LaTeX] <latex>`).
+4. **The Editing Loop**: An `Office.EventType.DocumentSelectionChanged` listener continuously monitors document selections. When the user clicks an equation picture in the document, its hidden LaTeX is detected, the "Edit Math" button lights up, and clicking it re-opens the MathLive editor with the existing equation pre-populated for modification.
 
----
-
-## 🚀 How It Works
-
-Word uses **Office Math Markup Language (OMML)** wrapped in **Office Open XML (OOXML)** for native math objects. Raw MathML or raw LaTeX strings cannot be injected directly via `insertOoxml()`.
-
-This add-in bridges the web and Office math standards entirely in the browser:
-
-```
-[ LaTeX Input ]
-       │
-       ▼  (KaTeX client-side engine)
-[ MathML (<math>) ] + [ Live KaTeX Rendered Preview ]
-       │
-       ▼  (Clean semantics + mathml2omml)
-[ OMML (<m:oMath>) ]
-       │
-       ▼  (Wrap into Open Packaging Conventions Flat OPC envelope)
-[ OOXML (<pkg:package>) ]
-       │
-       ▼  (Word.run + context.document.getSelection().insertOoxml)
-[ Native Editable Word Equation ]
-```
+100% client-side (HTML, CSS, JS) suitable for hosting on **GitHub Pages**.
 
 ---
 
-## 📁 Project Structure
+## 📁 Architecture & File Overview
 
 ```
 mathtype_clone/
-├── manifest.xml       # Office Add-in XML manifest with ribbons and permissions
-├── index.html         # Task pane UI with KaTeX and Office.js CDN links
-├── app.js             # Conversion, rendering, and Office.js injection logic
-├── assets/            # App icons (16x16, 32x32, 80x80)
-└── README.md          # Setup, deployment, and sideloading documentation
+├── manifest.xml       # Add-in manifest with Dialog API permissions & ribbon button
+├── index.html         # Task Pane Hub UI (selection status, Edit Math & New Equation)
+├── app.js             # Hub logic, selection listener, MathJax/Canvas rasterizer & Word API
+├── editor.html        # Floating Dialog with MathLive interactive visual math editor
+├── assets/            # Add-in ribbon icons (16x16, 32x32, 80x80)
+└── README.md          # Documentation
+```
+
+---
+
+## 🔄 The Complete Workflow
+
+```
+[ Document Selection Listener ]
+       │  (Office.EventType.DocumentSelectionChanged)
+       ▼
+[ Click Equation in Word ] ──► Read image.altTextDescription
+       │                       (Tag: [MathType:LaTeX] <latex>)
+       ▼
+[ "Edit Math" Enabled in Hub ]
+       │
+       ▼  (Office.context.ui.displayDialogAsync)
+[ Floating Dialog (editor.html) ]
+       │  (MathLive Visual <math-field> Editor)
+       ▼  (Office.context.ui.messageParent)
+[ LaTeX Returned to Hub ]
+       │
+       ▼  (MathJax Vector SVG ──► HTML5 Canvas ──► 3x High-DPI PNG)
+[ Base64 PNG + AltText ]
+       │
+       ▼  (range.insertInlinePictureFromBase64 / Replace)
+[ Word Document Updated ]
 ```
 
 ---
 
 ## 🌐 GitHub Pages Deployment
 
-1. **Create a GitHub Repository**:
-   - Push these files (`manifest.xml`, `index.html`, `app.js`, and `assets/`) to your repository (e.g. `https://github.com/<YOUR-USERNAME>/<YOUR-REPO-NAME>`).
-
-2. **Enable GitHub Pages**:
-   - Go to your repository **Settings** > **Pages**.
-   - Under **Build and deployment** > **Branch**, select `main` (or `master`) and folder `/ (root)`.
-   - Click **Save**.
-   - Your site URL will look like: `https://<YOUR-USERNAME>.github.io/<YOUR-REPO-NAME>/index.html`.
-
-3. **Update `manifest.xml`**:
-   - Open [manifest.xml](file:///d:/mathtype_clone/manifest.xml) and replace all instances of:
-     `https://YOUR-GITHUB-USERNAME.github.io/YOUR-REPO-NAME/`
-     with your actual GitHub Pages URL.
-
----
-
-## 💻 Sideloading into Microsoft Word
-
-### Method A: Word for the Web (Fastest for testing)
-1. Open any document in [Word for the Web](https://office.live.com/start/Word.aspx).
-2. Go to **Insert** > **Add-ins** > **Upload My Add-in**.
-3. Browse and select your updated `manifest.xml`.
-4. The **MathType** button will appear under the **Insert** tab in the ribbon.
-
-### Method B: Word Desktop (Windows)
-1. Share the folder containing `manifest.xml` as a network share (e.g., `\\localhost\MyAddins`).
-2. In Word, go to **File** > **Options** > **Trust Center** > **Trust Center Settings** > **Trusted Add-in Catalogs**.
-3. Enter the network share path (e.g., `\\localhost\MyAddins`), click **Add Catalog**, and check **Show in Menu**.
-4. Restart Word.
-5. Go to **Insert** > **Get Add-ins** (or **My Add-ins**) > **Shared Folder**, select **MathType Clone**, and click **Add**.
-
----
-
-## ⌨️ Features & Shortcuts
-
-- **Live KaTeX Preview**: Real-time rendering as you type with instant syntax validation.
-- **Math Symbol Palette**: Quick-insert buttons for fractions, powers, roots, integrals, sums, matrices, and Greek letters.
-- **Display vs. Inline Mode**: Choose between centered display block equations (`<m:oMathPara>`) or inline equations (`<m:oMath>`).
-- **Keyboard Shortcut**: Press `Ctrl + Enter` (or `Cmd + Enter` on macOS) inside the LaTeX box to immediately insert the equation into Word.
-- **Standalone Preview**: Open `index.html` directly in any web browser to test formula rendering and conversion outside Word.
+1. Commit and push these files to your GitHub repository.
+2. Enable GitHub Pages in your repo under **Settings > Pages** (branch `main`, folder `/`).
+3. In `manifest.xml`, replace:
+   `https://YOUR-GITHUB-USERNAME.github.io/YOUR-REPO-NAME/`
+   with your live GitHub Pages URL.
+4. Sideload `manifest.xml` into Word (Desktop via Shared Folder / `npx office-addin-debugging start manifest.xml`, or Word for Web via Upload My Add-in).

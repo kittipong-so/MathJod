@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MathType - Interactive Equation Editor</title>
+
+  <!-- Office JavaScript API -->
+  <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+
+  <!-- MathLive Interactive Equation Library -->
+  <script defer src="https://cdn.jsdelivr.net/npm/mathlive"></script>
+
+  <style>
+    :root {
+      --primary: #185abd;
+      --primary-hover: #11499c;
+      --primary-active: #0c3875;
+      --bg: #f8f9fa;
+      --card-bg: #ffffff;
+      --border: #d2d0ce;
+      --border-focus: #185abd;
+      --text: #242424;
+      --text-muted: #616161;
+      --radius: 6px;
+      --font: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font);
+      background-color: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* Top Navigation Bar */
+    header {
+      background: #ffffff;
+      border-bottom: 1px solid var(--border);
+      padding: 12px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .title-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .title-group svg {
+      width: 22px;
+      height: 22px;
+      fill: var(--primary);
+    }
+
+    h1 {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--primary);
+    }
+
+    .mode-tag {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 12px;
+      background: #e1dfdd;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    /* Toolbar for Quick Math Templates */
+    .toolbar {
+      background: #ffffff;
+      border-bottom: 1px solid var(--border);
+      padding: 8px 18px;
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .tool-btn {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 4px 8px;
+      font-family: 'Cambria Math', 'KaTeX_Main', serif;
+      font-size: 13px;
+      cursor: pointer;
+      color: var(--text);
+      transition: all 0.15s ease;
+      min-width: 32px;
+      height: 30px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .tool-btn:hover {
+      background: #eef4fc;
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+
+    .tool-divider {
+      width: 1px;
+      height: 20px;
+      background: var(--border);
+      margin: 0 4px;
+    }
+
+    /* Editor Body */
+    main {
+      flex: 1;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      overflow-y: auto;
+    }
+
+    .editor-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    /* MathLive Field */
+    math-field {
+      background-color: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px;
+      font-size: 24px;
+      min-height: 120px;
+      box-shadow: inset 0 1px 3px rgba(0,0,0,0.03);
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    math-field:focus-within {
+      border-color: var(--border-focus);
+      box-shadow: 0 0 0 1px var(--border-focus);
+    }
+
+    /* Raw LaTeX display */
+    .latex-preview-card {
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 10px 12px;
+      font-size: 12px;
+    }
+
+    .latex-code {
+      font-family: 'Consolas', 'Courier New', monospace;
+      color: #004e8c;
+      word-break: break-all;
+      margin-top: 4px;
+      user-select: all;
+    }
+
+    /* Footer with Actions */
+    footer {
+      background: #ffffff;
+      border-top: 1px solid var(--border);
+      padding: 12px 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .actions-right {
+      display: flex;
+      gap: 10px;
+    }
+
+    button.btn {
+      height: 36px;
+      padding: 0 16px;
+      border-radius: var(--radius);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+    }
+
+    .btn-secondary {
+      background: #ffffff;
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+
+    .btn-secondary:hover {
+      background: #f3f2f1;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      border: none;
+      color: #ffffff;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-hover);
+    }
+
+    .btn-kbd {
+      font-size: 12px;
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      border-radius: 4px;
+      padding: 0 10px;
+      height: 30px;
+      cursor: pointer;
+    }
+
+    .btn-kbd:hover {
+      background: #f3f2f1;
+      color: var(--text);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header>
+    <div class="title-group">
+      <!-- Math symbol icon -->
+      <svg viewBox="0 0 24 24">
+        <path d="M18 4H6v2l6 6-6 6v2h12v-3h-7.5l4.5-4.5-4.5-4.5H18V4z"/>
+      </svg>
+      <h1>MathType Equation Editor</h1>
+    </div>
+    <span id="editorModeTag" class="mode-tag">New Equation</span>
+  </header>
+
+  <!-- Quick Math Templates Toolbar -->
+  <div class="toolbar">
+    <button class="tool-btn" data-cmd="insert" data-arg="\frac{#?}{#?}" title="Fraction: \frac{a}{b}">a/b</button>
+    <button class="tool-btn" data-cmd="insert" data-arg="#?^{#?}" title="Superscript: x^y">xʸ</button>
+    <button class="tool-btn" data-cmd="insert" data-arg="#?_{#?}" title="Subscript: x_y">xᵧ</button>
+    <button class="tool-btn" data-cmd="insert" data-arg="\sqrt{#?}" title="Square Root: \sqrt{x}">√x</button>
+    <button class="tool-btn" data-cmd="insert" data-arg="\sqrt[#?]{#?}" title="N-th Root: \sqrt[n]{x}">ⁿ√x</button>
+    
+    <div class="tool-divider"></div>
+
+    <button class="tool-btn" data-cmd="insert" data-arg="\left( #? \right)" title="Parentheses: ( )">(·)</button>
+    <button class="tool-btn" data-cmd="insert" data-arg="\int_{#?}^{#?} #? \,d#?" title="Definite Integral">∫</button>
+    <button class="tool-btn" data-cmd="insert" data-arg="\sum_{#?}^{#?} #?" title="Summation">∑</button>
+    <button class="tool-btn" data-cmd="insert" data-arg="\lim_{#? \to #?} #?" title="Limit">lim</button>
+    <button class="tool-btn" data-cmd="insert" data-arg="\begin{pmatrix} #? & #? \\ #? & #? \end{pmatrix}" title="2x2 Matrix">[M]</button>
+
+    <div class="tool-divider"></div>
+
+    <button class="tool-btn" data-cmd="insert" data-arg="\pm" title="Plus-Minus: \pm">±</button>
+    <button class="tool-btn" data-cmd="insert" data-arg="\times" title="Multiplication: \times">×</button>
+    <button class="tool-btn" data-cmd="insert" data-arg="\div" title="Division: \div">÷</button>
+    <button class="tool-btn" data-cmd="insert" data-arg="\neq" title="Not Equal: \neq">≠</button>
+    <button class="tool-btn" data-cmd="insert" data-arg="\leq" title="Less than or equal: \leq">≤</button>
+    <button class="tool-btn" data-cmd="insert" data-arg="\geq" title="Greater than or equal: \geq">≥</button>
+    <button class="tool-btn" data-cmd="insert" data-arg="\pi" title="Pi: \pi">π</button>
+    <button class="tool-btn" data-cmd="insert" data-arg="\theta" title="Theta: \theta">θ</button>
+    <button class="tool-btn" data-cmd="insert" data-arg="\infty" title="Infinity: \infty">∞</button>
+  </div>
+
+  <!-- Main MathLive Canvas -->
+  <main>
+    <div class="editor-label">
+      <span>Visual Math Editor</span>
+      <span style="font-weight: normal; text-transform: none;">Click or tap to edit visually</span>
+    </div>
+
+    <!-- MathLive Web Component -->
+    <math-field id="mathField" smart-mode="true" virtual-keyboard-mode="manual"></math-field>
+
+    <!-- Synchronized LaTeX view -->
+    <div class="latex-preview-card">
+      <div class="editor-label">
+        <span>LaTeX Representation</span>
+      </div>
+      <div id="latexOutput" class="latex-code"></div>
+    </div>
+  </main>
+
+  <!-- Dialog Footer -->
+  <footer>
+    <button id="btnToggleKeyboard" class="btn-kbd">⌨ Virtual Keyboard</button>
+    <div class="actions-right">
+      <button id="btnCancel" class="btn btn-secondary">Cancel</button>
+      <button id="btnInsert" class="btn btn-primary">
+        <span id="btnInsertText">Insert into Document</span>
+      </button>
+    </div>
+  </footer>
+
+  <script>
+    const mathField = document.getElementById('mathField');
+    const latexOutput = document.getElementById('latexOutput');
+    const btnInsert = document.getElementById('btnInsert');
+    const btnInsertText = document.getElementById('btnInsertText');
+    const btnCancel = document.getElementById('btnCancel');
+    const btnToggleKeyboard = document.getElementById('btnToggleKeyboard');
+    const editorModeTag = document.getElementById('editorModeTag');
+
+    /**
+     * Update synchronized LaTeX string display
+     */
+    function updateLatexDisplay() {
+      const latex = mathField.value;
+      latexOutput.textContent = latex || '(empty equation)';
+    }
+
+    /**
+     * Send message back to the Task Pane Hub via Office Dialog API
+     */
+    function sendToParent(action, latex = '') {
+      if (typeof Office !== 'undefined' && Office.context && Office.context.ui && Office.context.ui.messageParent) {
+        Office.context.ui.messageParent(JSON.stringify({
+          action: action,
+          latex: latex
+        }));
+      } else {
+        console.warn('Office.context.ui.messageParent is not available. Running standalone?');
+      }
+    }
+
+    /**
+     * Initialize on Office.onReady
+     */
+    Office.onReady(() => {
+      // Parse LaTeX passed from Task Pane through URL parameters
+      const urlParams = new URLSearchParams(window.location.search);
+      const initialLatex = urlParams.get('latex');
+
+      if (initialLatex) {
+        const decoded = decodeURIComponent(initialLatex);
+        mathField.value = decoded;
+        editorModeTag.textContent = 'Edit Mode';
+        btnInsertText.textContent = 'Update Equation';
+      } else {
+        mathField.value = 'x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}';
+        editorModeTag.textContent = 'New Equation';
+        btnInsertText.textContent = 'Insert into Document';
+      }
+
+      updateLatexDisplay();
+
+      // Focus editor
+      setTimeout(() => {
+        mathField.focus();
+      }, 200);
+    });
+
+    // Event listener for MathLive changes
+    mathField.addEventListener('input', updateLatexDisplay);
+
+    // Toolbar template buttons
+    document.querySelectorAll('.tool-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const cmd = btn.dataset.cmd;
+        const arg = btn.dataset.arg;
+        if (cmd && arg) {
+          mathField.executeCommand([cmd, arg]);
+          mathField.focus();
+          updateLatexDisplay();
+        }
+      });
+    });
+
+    // Virtual keyboard toggle
+    btnToggleKeyboard.addEventListener('click', () => {
+      mathField.executeCommand(['toggleVirtualKeyboard']);
+      mathField.focus();
+    });
+
+    // Insert button click
+    btnInsert.addEventListener('click', () => {
+      const latex = mathField.value.trim();
+      sendToParent('insert', latex);
+    });
+
+    // Cancel button click
+    btnCancel.addEventListener('click', () => {
+      sendToParent('cancel');
+    });
+
+    // Enter key submits equation (Ctrl+Enter or Cmd+Enter)
+    window.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault();
+        const latex = mathField.value.trim();
+        sendToParent('insert', latex);
+      } else if (e.key === 'Escape') {
+        sendToParent('cancel');
+      }
+    });
+  </script>
+</body>
+</html>
