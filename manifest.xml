@@ -15,9 +15,9 @@
   <Description DefaultValue="LaTeX equation editor for Microsoft Word with live KaTeX preview and native editable equation insertion." />
   
   <!-- Icon URLs (replace with your GitHub Pages URL) -->
-  <IconUrl DefaultValue="https://YOUR-GITHUB-USERNAME.github.io/YOUR-REPO-NAME/assets/icon-32.png" />
-  <HighResolutionIconUrl DefaultValue="https://YOUR-GITHUB-USERNAME.github.io/YOUR-REPO-NAME/assets/icon-80.png" />
-  <SupportUrl DefaultValue="https://YOUR-GITHUB-USERNAME.github.io/YOUR-REPO-NAME" />
+  <IconUrl DefaultValue="https://kittipong-so.github.io/MathJod/assets/icon-32.png" />
+  <HighResolutionIconUrl DefaultValue="https://kittipong-so.github.io/MathJod/assets/icon-80.png" />
+  <SupportUrl DefaultValue="https://kittipong-so.github.io/MathJod" />
 
   <!-- Allowed domains -->
   <AppDomains>
@@ -31,7 +31,7 @@
   </Hosts>
 
   <DefaultSettings>
-    <SourceLocation DefaultValue="https://YOUR-GITHUB-USERNAME.github.io/YOUR-REPO-NAME/index.html" />
+    <SourceLocation DefaultValue="https://kittipong-so.github.io/MathJod/index.html" />
   </DefaultSettings>
 
   <!-- ReadWriteDocument permission is required to insert OOXML equations -->
@@ -86,13 +86,13 @@
 
     <Resources>
       <bt:Images>
-        <bt:Image id="Icon.16" DefaultValue="https://YOUR-GITHUB-USERNAME.github.io/YOUR-REPO-NAME/assets/icon-16.png" />
-        <bt:Image id="Icon.32" DefaultValue="https://YOUR-GITHUB-USERNAME.github.io/YOUR-REPO-NAME/assets/icon-32.png" />
-        <bt:Image id="Icon.80" DefaultValue="https://YOUR-GITHUB-USERNAME.github.io/YOUR-REPO-NAME/assets/icon-80.png" />
+        <bt:Image id="Icon.16" DefaultValue="https://kittipong-so.github.io/MathJod/assets/icon-16.png" />
+        <bt:Image id="Icon.32" DefaultValue="https://kittipong-so.github.io/MathJod/assets/icon-32.png" />
+        <bt:Image id="Icon.80" DefaultValue="https://kittipong-so.github.io/MathJod/assets/icon-80.png" />
       </bt:Images>
       <bt:Urls>
-        <bt:Url id="GetStarted.LearnMoreUrl" DefaultValue="https://YOUR-GITHUB-USERNAME.github.io/YOUR-REPO-NAME" />
-        <bt:Url id="Taskpane.Url" DefaultValue="https://YOUR-GITHUB-USERNAME.github.io/YOUR-REPO-NAME/index.html" />
+        <bt:Url id="GetStarted.LearnMoreUrl" DefaultValue="https://kittipong-so.github.io/MathJod" />
+        <bt:Url id="Taskpane.Url" DefaultValue="https://kittipong-so.github.io/MathJod/index.html" />
       </bt:Urls>
       <bt:ShortStrings>
         <bt:String id="GetStarted.Title" DefaultValue="MathType Clone" />
