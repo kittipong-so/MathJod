@@ -397,8 +397,8 @@
     </div>
 
     <div class="header-controls">
-      <span id="editorModeTag" class="mode-tag">New Equation</span>
-      <button id="btnClear" class="btn-clear" title="Clear current equation">Clear</button>
+      <!-- <span id="editorModeTag" class="mode-tag">New Equation</span>
+      <button id="btnClear" class="btn-clear" title="Clear current equation">Clear</button> -->
     </div>
   </header>
 
@@ -412,10 +412,10 @@
       <button class="tab-btn" data-tab="tab-edit">Edit</button>
     </div>
 
-    <!-- Virtual Keyboard Toggle Button -->
+    <!-- Virtual Keyboard Toggle Button
     <button id="btnToggleKeyboard" class="tab-action-btn" title="Toggle On-Screen Virtual Keyboard">
       ⌨ Virtual Keyboard
-    </button>
+    </button> -->
   </nav>
 
   <!-- 1. Insert Panel -->
@@ -528,7 +528,11 @@
   <!-- Main MathLive Canvas -->
   <main>
     <div class="editor-label">
-      <span>Visual Math Canvas</span>
+      <div>
+        <span>Visual Math Canvas</span>
+        <button id="btnClear" class="btn-clear" title="Clear current equation">Clear</button>
+      </div>
+      
       <span style="font-weight: normal; text-transform: none;">Click or tap to edit visually</span>
     </div>
 
