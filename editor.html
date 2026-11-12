@@ -22,6 +22,8 @@
       --border-focus: #185abd;
       --text: #242424;
       --text-muted: #616161;
+      --danger: #a80000;
+      --danger-bg: #fde7e9;
       --radius: 6px;
       --font: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
     }
@@ -73,7 +75,7 @@
     .header-controls {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 10px;
     }
 
     .mode-tag {
@@ -85,34 +87,43 @@
       font-weight: 500;
     }
 
-    .btn-kbd {
+    /* Clear Button replacing keyboard button in the header */
+    .btn-clear {
       font-size: 12px;
-      background: transparent;
+      font-family: inherit;
+      background: #ffffff;
       border: 1px solid var(--border);
-      color: var(--text-muted);
+      color: var(--danger);
       border-radius: 4px;
       padding: 0 10px;
       height: 28px;
       cursor: pointer;
       display: inline-flex;
       align-items: center;
-      gap: 5px;
+      gap: 4px;
+      font-weight: 500;
       transition: all 0.15s ease;
     }
 
-    .btn-kbd:hover {
-      background: #f3f2f1;
-      color: var(--text);
+    .btn-clear:hover {
+      background: var(--danger-bg);
+      border-color: var(--danger);
     }
 
-    /* Ribbon Tabs (Replacing Burger Menu) */
+    /* Ribbon Tabs */
     .ribbon-tabs {
       display: flex;
+      align-items: center;
+      justify-content: space-between;
       background: #f3f2f1;
       border-bottom: 1px solid var(--border);
       padding: 0 14px;
-      gap: 2px;
       user-select: none;
+    }
+
+    .tab-buttons {
+      display: flex;
+      gap: 2px;
     }
 
     .tab-btn {
@@ -138,6 +149,29 @@
       font-weight: 600;
       border-bottom-color: var(--primary);
       background: #ffffff;
+    }
+
+    /* Virtual Keyboard Toggle moved to Ribbon Tabs bar */
+    .tab-action-btn {
+      font-size: 12px;
+      font-family: inherit;
+      background: #ffffff;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      border-radius: 4px;
+      padding: 3px 10px;
+      height: 26px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.15s ease;
+    }
+
+    .tab-action-btn:hover {
+      background: #eef4fc;
+      color: var(--primary);
+      border-color: var(--primary);
     }
 
     /* Ribbon Toolbar Panels */
@@ -236,7 +270,7 @@
       justify-content: space-between;
     }
 
-    /* MathLive Field: Hide default corner burger menu */
+    /* MathLive Field */
     math-field {
       background-color: var(--card-bg);
       border: 1px solid var(--border);
@@ -257,6 +291,18 @@
     math-field:focus-within {
       border-color: var(--border-focus);
       box-shadow: 0 0 0 1px var(--border-focus);
+    }
+
+    /* CSS enhancement for empty matrix cells */
+    math-field::part(content) .ML__cell:empty,
+    math-field::part(content) td:empty {
+      min-width: 1.2em;
+      min-height: 1.2em;
+      display: inline-block;
+      border: 1px dashed rgba(0, 0, 0, 0.35);
+      border-radius: 2px;
+      vertical-align: middle;
+      margin: 2px;
     }
 
     /* Raw LaTeX display */
@@ -335,17 +381,25 @@
 
     <div class="header-controls">
       <span id="editorModeTag" class="mode-tag">New Equation</span>
-      <button id="btnToggleKeyboard" class="btn-kbd">⌨ Keyboard</button>
+      <!-- Clear button (Replaced Virtual Keyboard in the header) -->
+      <button id="btnClear" class="btn-clear" title="Clear current equation">Clear</button>
     </div>
   </header>
 
-  <!-- Upper Tab Navigation Bar (Moved from Burger Menu) -->
+  <!-- Upper Tab Navigation Bar with Virtual Keyboard Button -->
   <nav class="ribbon-tabs">
-    <button class="tab-btn active" data-tab="tab-insert">Insert</button>
-    <button class="tab-btn" data-tab="tab-matrix">Matrix</button>
-    <button class="tab-btn" data-tab="tab-style">Font &amp; Style</button>
-    <button class="tab-btn" data-tab="tab-color">Colors</button>
-    <button class="tab-btn" data-tab="tab-edit">Edit</button>
+    <div class="tab-buttons">
+      <button class="tab-btn active" data-tab="tab-insert">Insert</button>
+      <button class="tab-btn" data-tab="tab-matrix">Matrix</button>
+      <button class="tab-btn" data-tab="tab-style">Font &amp; Style</button>
+      <button class="tab-btn" data-tab="tab-color">Colors</button>
+      <button class="tab-btn" data-tab="tab-edit">Edit</button>
+    </div>
+
+    <!-- Virtual Keyboard Toggle Button (Moved into the tabs bar) -->
+    <button id="btnToggleKeyboard" class="tab-action-btn" title="Toggle On-Screen Virtual Keyboard">
+      ⌨ Virtual Keyboard
+    </button>
   </nav>
 
   <!-- 1. Insert Panel -->
@@ -388,7 +442,7 @@
     <button class="tool-btn" data-cmd="insert" data-arg="\theta" title="Theta: θ">θ</button>
   </div>
 
-  <!-- 2. Matrix Panel (Moved from Burger Menu) -->
+  <!-- 2. Matrix Panel -->
   <div id="tab-matrix" class="ribbon-panel">
     <span class="panel-label">Presets:</span>
     <button class="tool-btn tool-btn-labeled" data-cmd="insert" data-arg="\begin{pmatrix} #? & #? \\ #? & #? \end{pmatrix}" title="2x2 Matrix">2×2 ( )</button>
@@ -401,13 +455,13 @@
     <div class="tool-divider"></div>
 
     <span class="panel-label">Modify Matrix:</span>
-    <button class="tool-btn tool-btn-labeled" data-action="addRowAfter" title="Add Row Below">+ Row</button>
-    <button class="tool-btn tool-btn-labeled" data-action="addColumnAfter" title="Add Column Right">+ Col</button>
-    <button class="tool-btn tool-btn-labeled" data-action="removeRow" title="Delete Current Row">− Row</button>
-    <button class="tool-btn tool-btn-labeled" data-action="removeColumn" title="Delete Current Column">− Col</button>
+    <button class="tool-btn tool-btn-labeled" data-matrix-action="addColumnAfter" title="Add Column Right with Placeholder">+ Col</button>
+    <button class="tool-btn tool-btn-labeled" data-matrix-action="addRowAfter" title="Add Row Below with Placeholder">+ Row</button>
+    <button class="tool-btn tool-btn-labeled" data-matrix-action="removeColumn" title="Delete Current Column">− Col</button>
+    <button class="tool-btn tool-btn-labeled" data-matrix-action="removeRow" title="Delete Current Row">− Row</button>
   </div>
 
-  <!-- 3. Font & Style Panel (Moved from Burger Menu) -->
+  <!-- 3. Font & Style Panel -->
   <div id="tab-style" class="ribbon-panel">
     <span class="panel-label">Font Styles:</span>
     <button class="tool-btn tool-btn-labeled" data-cmd="insert" data-arg="\mathbf{#?}" title="Bold: \mathbf{x}"><b>Bold</b></button>
@@ -423,7 +477,7 @@
     <button class="tool-btn tool-btn-labeled" data-cmd="insert" data-arg="\text{#?}" title="Plain Text in Equation">"Text Mode"</button>
   </div>
 
-  <!-- 4. Colors Panel (Moved from Burger Menu) -->
+  <!-- 4. Colors Panel -->
   <div id="tab-color" class="ribbon-panel">
     <span class="panel-label">Text Color:</span>
     <button class="color-swatch" data-color="#000000" style="background: #000000;" title="Default Black"></button>
@@ -443,7 +497,7 @@
     <button class="tool-btn tool-btn-labeled" data-bgcolor="#fde7e9" style="background: #fde7e9;" title="Pink Highlight">Pink</button>
   </div>
 
-  <!-- 5. Edit Panel (Moved from Burger Menu: Cut, Copy, Paste, Select All) -->
+  <!-- 5. Edit Panel -->
   <div id="tab-edit" class="ribbon-panel">
     <button class="tool-btn tool-btn-labeled" data-action="undo" title="Undo (Ctrl+Z)">↶ Undo</button>
     <button class="tool-btn tool-btn-labeled" data-action="redo" title="Redo (Ctrl+Y)">↷ Redo</button>
@@ -457,7 +511,6 @@
     <div class="tool-divider"></div>
 
     <button class="tool-btn tool-btn-labeled" data-action="selectAll" title="Select All (Ctrl+A)">Select All</button>
-    <button class="tool-btn tool-btn-labeled" data-action="deleteAll" title="Clear Field">Clear All</button>
   </div>
 
   <!-- Main MathLive Canvas -->
@@ -467,7 +520,7 @@
       <span style="font-weight: normal; text-transform: none;">Click or tap to edit visually</span>
     </div>
 
-    <!-- MathLive Web Component (Burger toggle hidden via CSS) -->
+    <!-- MathLive Web Component -->
     <math-field id="mathField" smart-mode="true" virtual-keyboard-mode="manual"></math-field>
 
     <!-- Synchronized LaTeX view -->
@@ -493,6 +546,7 @@
     const btnInsert = document.getElementById('btnInsert');
     const btnInsertText = document.getElementById('btnInsertText');
     const btnCancel = document.getElementById('btnCancel');
+    const btnClear = document.getElementById('btnClear');
     const btnToggleKeyboard = document.getElementById('btnToggleKeyboard');
     const editorModeTag = document.getElementById('editorModeTag');
 
@@ -519,15 +573,53 @@
     }
 
     /**
-     * Initialize Ribbon Tabs switching
+     * Ensure all newly created empty cells in any matrix environment have visible placeholder boxes
+     */
+    function fillEmptyMatrixCells(tex) {
+      if (!tex) return tex;
+      return tex.replace(/(\\begin\{(?:[a-zA-Z]*matrix|matrix|array)\})([\s\S]*?)(\\end\{(?:[a-zA-Z]*matrix|matrix|array)\})/g, (match, openTag, body, closeTag) => {
+        const rows = body.split('\\\\');
+        const newRows = rows.map(row => {
+          const cells = row.split('&');
+          const newCells = cells.map(cell => {
+            if (cell.trim() === '') {
+              return '\\placeholder{}';
+            }
+            return cell;
+          });
+          return newCells.join(' & ');
+        });
+        return openTag + newRows.join(' \\\\ ') + closeTag;
+      });
+    }
+
+    /**
+     * Add or remove rows/columns in matrices and ensure placeholder boxes appear
+     */
+    function handleMatrixModification(action) {
+      mathField.executeCommand(action);
+
+      // If adding a column or row, ensure any empty cells are filled with \placeholder{}
+      if (action === 'addColumnAfter' || action === 'addColumnBefore' || action === 'addRowAfter' || action === 'addRowBefore') {
+        const currentTex = mathField.getValue();
+        const filledTex = fillEmptyMatrixCells(currentTex);
+        if (filledTex !== currentTex) {
+          mathField.setValue(filledTex, { selectionMode: 'item' });
+        }
+      }
+
+      mathField.focus();
+      updateLatexDisplay();
+    }
+
+    /**
+     * Ribbon Tabs navigation
      */
     document.querySelectorAll('.tab-btn').forEach(tabBtn => {
       tabBtn.addEventListener('click', () => {
-        // Deactivate all tabs and panels
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         document.querySelectorAll('.ribbon-panel').forEach(p => p.classList.remove('active'));
 
-        // Activate clicked tab and matching panel
         tabBtn.classList.add('active');
         const targetId = tabBtn.dataset.tab;
         const panel = document.getElementById(targetId);
@@ -551,7 +643,19 @@
     });
 
     /**
-     * Action Buttons (Matrix & Edit operations: addRow, cut, copy, paste, etc.)
+     * Matrix Action Buttons (+ Col, + Row, - Col, - Row)
+     */
+    document.querySelectorAll('.tool-btn[data-matrix-action]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const action = btn.dataset.matrixAction;
+        if (action) {
+          handleMatrixModification(action);
+        }
+      });
+    });
+
+    /**
+     * General Action Buttons (Edit operations: cut, copy, paste, undo, redo, selectAll)
      */
     document.querySelectorAll('.tool-btn[data-action]').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -589,7 +693,7 @@
     });
 
     /**
-     * Virtual keyboard toggle
+     * Virtual Keyboard Toggle Button (In Tabs bar)
      */
     btnToggleKeyboard.addEventListener('click', () => {
       mathField.executeCommand(['toggleVirtualKeyboard']);
@@ -597,10 +701,19 @@
     });
 
     /**
+     * Clear Button (In Header)
+     */
+    btnClear.addEventListener('click', () => {
+      mathField.value = '';
+      updateLatexDisplay();
+      mathField.focus();
+    });
+
+    /**
      * Initialize on Office.onReady
      */
     Office.onReady(() => {
-      // Remove any default menuItems to ensure burger never shows up
+      // Hide default corner menu
       try {
         mathField.menuItems = [];
       } catch (_) {}
@@ -615,7 +728,8 @@
         editorModeTag.textContent = 'Edit Mode';
         btnInsertText.textContent = 'Update Equation';
       } else {
-        mathField.value = 'x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}';
+        // Blank canvas by default for New Equation
+        mathField.value = '';
         editorModeTag.textContent = 'New Equation';
         btnInsertText.textContent = 'Insert into Document';
       }
