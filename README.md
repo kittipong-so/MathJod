@@ -1,4 +1,4 @@
-# MathType Clone - Traditional Picture-Object Architecture
+# Math typing addon - Traditional Picture-Object Architecture
 
 A Microsoft Word Task Pane Add-in that implements the classic **MathType picture-object workflow**:
 
