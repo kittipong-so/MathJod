@@ -11,6 +11,7 @@ let isWordHost = false;
 let currentDialog = null;
 let selectedEquationLatex = null;
 let isUpdatingExisting = false;
+let lastProcessedActionId = null;
 
 // DOM Elements
 const btnEditMath = document.getElementById('btnEditMath');
@@ -107,7 +108,6 @@ async function onDocumentSelectionChanged() {
       await context.sync();
 
       if (inlinePictures.items && inlinePictures.items.length > 0) {
-        // Inspect the first picture in the selection
         const pic = inlinePictures.items[0];
         const latex = extractLatexFromAltText(pic.altTextDescription);
 
@@ -126,6 +126,21 @@ async function onDocumentSelectionChanged() {
 }
 
 /**
+ * Safely close the active dialog
+ */
+function closeDialogSafely() {
+  if (currentDialog) {
+    try {
+      currentDialog.close();
+      console.log('Dialog closed via currentDialog.close()');
+    } catch (e) {
+      console.warn('currentDialog.close() exception:', e);
+    }
+    currentDialog = null;
+  }
+}
+
+/**
  * Open the interactive MathLive editor using Office Dialog API
  */
 function openEditorDialog(initialLatex = null) {
@@ -137,21 +152,41 @@ function openEditorDialog(initialLatex = null) {
     dialogUrl.searchParams.set('latex', encodeURIComponent(initialLatex));
   }
 
-  // Office Dialog API options (65% height, 60% width)
+  console.log('Opening editor dialog URL:', dialogUrl.href);
+
+  // Office Dialog API options
+  // displayInIframe: true ensures in-app overlay on Word on the web (avoids popup blockers)
   const options = {
     height: 65,
     width: 60,
-    displayInIframe: false
+    displayInIframe: true
   };
 
   Office.context.ui.displayDialogAsync(dialogUrl.href, options, (asyncResult) => {
     if (asyncResult.status === Office.AsyncResultStatus.Failed) {
-      console.error('Failed to open dialog:', asyncResult.error.message);
+      console.error('Failed to open dialog via displayDialogAsync:', asyncResult.error.message);
+
+      // Fallback: If displayInIframe: true failed or was rejected, try fallback with displayInIframe: false
+      if (options.displayInIframe) {
+        options.displayInIframe = false;
+        Office.context.ui.displayDialogAsync(dialogUrl.href, options, (retryResult) => {
+          if (retryResult.status === Office.AsyncResultStatus.Failed) {
+            showStatus(`Failed to open equation editor: ${retryResult.error.message}`, 'error', 6000);
+          } else {
+            currentDialog = retryResult.value;
+            currentDialog.addEventHandler(Office.EventType.DialogMessageReceived, onDialogMessage);
+            currentDialog.addEventHandler(Office.EventType.DialogEventReceived, onDialogEvent);
+          }
+        });
+        return;
+      }
+
       showStatus(`Failed to open equation editor: ${asyncResult.error.message}`, 'error', 6000);
       return;
     }
 
     currentDialog = asyncResult.value;
+    console.log('Dialog successfully opened');
 
     // Register message and event handlers
     currentDialog.addEventHandler(Office.EventType.DialogMessageReceived, onDialogMessage);
@@ -160,45 +195,106 @@ function openEditorDialog(initialLatex = null) {
 }
 
 /**
- * Handle messages sent from the Dialog via messageParent
+ * Universal Dialog Message Processor (Deduplicated across channels)
  */
-async function onDialogMessage(arg) {
-  try {
-    const data = JSON.parse(arg.message);
+async function processDialogMessagePayload(rawPayload) {
+  if (!rawPayload) return;
 
-    if (data.action === 'insert') {
-      if (currentDialog) {
-        currentDialog.close();
-        currentDialog = null;
-      }
-      await processAndInsertEquation(data.latex);
-    } else if (data.action === 'cancel') {
-      if (currentDialog) {
-        currentDialog.close();
-        currentDialog = null;
-      }
-    }
-  } catch (err) {
-    console.error('Error handling dialog message:', err);
+  let data;
+  try {
+    data = typeof rawPayload === 'string' ? JSON.parse(rawPayload) : rawPayload;
+  } catch (e) {
+    console.warn('Unable to parse dialog payload:', rawPayload);
+    return;
+  }
+
+  // Deduplication guard
+  const msgId = `${data.action}_${data.timestamp || ''}`;
+  if (lastProcessedActionId && lastProcessedActionId === msgId) {
+    return;
+  }
+  lastProcessedActionId = msgId;
+
+  console.log('Processing action from dialog:', data.action);
+
+  if (data.action === 'insert') {
+    closeDialogSafely();
+    await processAndInsertEquation(data.latex);
+  } else if (data.action === 'cancel') {
+    closeDialogSafely();
+    showStatus('Equation edit cancelled.', 'success', 2000);
   }
 }
 
 /**
- * Handle dialog events (e.g. user clicked window close button)
+ * 1. Primary Channel: Office.EventType.DialogMessageReceived
+ */
+function onDialogMessage(arg) {
+  console.log('DialogMessageReceived event triggered:', arg);
+  const raw = arg && arg.message ? arg.message : arg;
+  processDialogMessagePayload(raw);
+}
+
+/**
+ * Handle dialog events (e.g. user clicked window close button 'X')
  */
 function onDialogEvent(arg) {
-  console.log('Dialog closed or event triggered:', arg.error);
+  console.log('DialogEventReceived event triggered:', arg);
   currentDialog = null;
+}
+
+/**
+ * 2. Secondary Channel: postMessage listener
+ */
+window.addEventListener('message', (event) => {
+  if (event.data && typeof event.data === 'string' && event.data.includes('"action"')) {
+    processDialogMessagePayload(event.data);
+  }
+});
+
+/**
+ * 3. Tertiary Channel: BroadcastChannel listener
+ */
+if (typeof BroadcastChannel !== 'undefined') {
+  const channel = new BroadcastChannel('mathtype_bridge_channel');
+  channel.onmessage = (event) => {
+    console.log('BroadcastChannel message received:', event.data);
+    processDialogMessagePayload(event.data);
+  };
+}
+
+/**
+ * 4. Quaternary Channel: LocalStorage Event Bus listener
+ */
+window.addEventListener('storage', (e) => {
+  if (e.key === 'mathtype_dialog_bridge' && e.newValue) {
+    console.log('LocalStorage bridge event received');
+    processDialogMessagePayload(e.newValue);
+    try {
+      localStorage.removeItem('mathtype_dialog_bridge');
+    } catch (_) {}
+  }
+});
+
+/**
+ * Wait for MathJax to be fully initialized
+ */
+async function ensureMathJaxReady() {
+  if (window.MathJax && window.MathJax.tex2svgPromise) return;
+
+  for (let i = 0; i < 50; i++) {
+    await new Promise(r => setTimeout(r, 100));
+    if (window.MathJax && window.MathJax.tex2svgPromise) return;
+  }
+
+  throw new Error('MathJax rendering engine is not yet ready. Please check your internet connection.');
 }
 
 /**
  * Convert LaTeX string into a high-DPI Base64 PNG image using MathJax SVG + Canvas
  */
 async function renderLatexToBase64Png(latex) {
-  // Wait for MathJax to be available if still initializing
-  if (!window.MathJax || !window.MathJax.tex2svgPromise) {
-    throw new Error('MathJax rendering engine is not yet ready. Please try again.');
-  }
+  await ensureMathJaxReady();
 
   // Generate vector SVG node from LaTeX
   const container = await window.MathJax.tex2svgPromise(latex, { display: true });
