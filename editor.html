@@ -46,7 +46,7 @@
     header {
       background: #ffffff;
       border-bottom: 1px solid var(--border);
-      padding: 12px 18px;
+      padding: 10px 18px;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -65,9 +65,15 @@
     }
 
     h1 {
-      font-size: 16px;
+      font-size: 15px;
       font-weight: 600;
       color: var(--primary);
+    }
+
+    .header-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
 
     .mode-tag {
@@ -79,15 +85,75 @@
       font-weight: 500;
     }
 
-    /* Toolbar for Quick Math Templates */
-    .toolbar {
+    .btn-kbd {
+      font-size: 12px;
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      border-radius: 4px;
+      padding: 0 10px;
+      height: 28px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.15s ease;
+    }
+
+    .btn-kbd:hover {
+      background: #f3f2f1;
+      color: var(--text);
+    }
+
+    /* Ribbon Tabs (Replacing Burger Menu) */
+    .ribbon-tabs {
+      display: flex;
+      background: #f3f2f1;
+      border-bottom: 1px solid var(--border);
+      padding: 0 14px;
+      gap: 2px;
+      user-select: none;
+    }
+
+    .tab-btn {
+      padding: 8px 14px;
+      font-size: 12px;
+      font-weight: 500;
+      font-family: inherit;
+      color: var(--text-muted);
+      background: transparent;
+      border: none;
+      border-bottom: 2px solid transparent;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .tab-btn:hover {
+      color: var(--primary);
+      background: rgba(24, 90, 189, 0.04);
+    }
+
+    .tab-btn.active {
+      color: var(--primary);
+      font-weight: 600;
+      border-bottom-color: var(--primary);
+      background: #ffffff;
+    }
+
+    /* Ribbon Toolbar Panels */
+    .ribbon-panel {
+      display: none;
       background: #ffffff;
       border-bottom: 1px solid var(--border);
-      padding: 8px 18px;
-      display: flex;
+      padding: 8px 16px;
       gap: 6px;
-      flex-wrap: wrap;
       align-items: center;
+      flex-wrap: wrap;
+      min-height: 48px;
+    }
+
+    .ribbon-panel.active {
+      display: flex;
     }
 
     .tool-btn {
@@ -113,11 +179,41 @@
       color: var(--primary);
     }
 
+    .tool-btn-labeled {
+      font-family: var(--font);
+      font-size: 12px;
+      padding: 4px 10px;
+      gap: 5px;
+    }
+
     .tool-divider {
       width: 1px;
-      height: 20px;
+      height: 22px;
       background: var(--border);
       margin: 0 4px;
+    }
+
+    .panel-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      margin-right: 4px;
+    }
+
+    /* Color Swatches */
+    .color-swatch {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      border: 2px solid transparent;
+      cursor: pointer;
+      transition: transform 0.15s, border-color 0.15s;
+    }
+
+    .color-swatch:hover {
+      transform: scale(1.15);
+      border-color: #000000;
     }
 
     /* Editor Body */
@@ -140,7 +236,7 @@
       justify-content: space-between;
     }
 
-    /* MathLive Field */
+    /* MathLive Field: Hide default corner burger menu */
     math-field {
       background-color: var(--card-bg);
       border: 1px solid var(--border);
@@ -151,6 +247,11 @@
       box-shadow: inset 0 1px 3px rgba(0,0,0,0.03);
       outline: none;
       transition: border-color 0.15s;
+    }
+
+    /* Completely hide MathLive's native menu toggle (hamburger) icon */
+    math-field::part(menu-toggle) {
+      display: none !important;
     }
 
     math-field:focus-within {
@@ -181,12 +282,8 @@
       border-top: 1px solid var(--border);
       padding: 12px 18px;
       display: flex;
-      justify-content: space-between;
+      justify-content: flex-end;
       align-items: center;
-    }
-
-    .actions-right {
-      display: flex;
       gap: 10px;
     }
 
@@ -223,22 +320,6 @@
     .btn-primary:hover {
       background: var(--primary-hover);
     }
-
-    .btn-kbd {
-      font-size: 12px;
-      background: transparent;
-      border: 1px solid var(--border);
-      color: var(--text-muted);
-      border-radius: 4px;
-      padding: 0 10px;
-      height: 30px;
-      cursor: pointer;
-    }
-
-    .btn-kbd:hover {
-      background: #f3f2f1;
-      color: var(--text);
-    }
   </style>
 </head>
 <body>
@@ -246,52 +327,147 @@
   <!-- Header -->
   <header>
     <div class="title-group">
-      <!-- Math symbol icon -->
       <svg viewBox="0 0 24 24">
         <path d="M18 4H6v2l6 6-6 6v2h12v-3h-7.5l4.5-4.5-4.5-4.5H18V4z"/>
       </svg>
       <h1>MathType Equation Editor</h1>
     </div>
-    <span id="editorModeTag" class="mode-tag">New Equation</span>
+
+    <div class="header-controls">
+      <span id="editorModeTag" class="mode-tag">New Equation</span>
+      <button id="btnToggleKeyboard" class="btn-kbd">⌨ Keyboard</button>
+    </div>
   </header>
 
-  <!-- Quick Math Templates Toolbar -->
-  <div class="toolbar">
-    <button class="tool-btn" data-cmd="insert" data-arg="\frac{#?}{#?}" title="Fraction: \frac{a}{b}">a/b</button>
-    <button class="tool-btn" data-cmd="insert" data-arg="#?^{#?}" title="Superscript: x^y">xʸ</button>
+  <!-- Upper Tab Navigation Bar (Moved from Burger Menu) -->
+  <nav class="ribbon-tabs">
+    <button class="tab-btn active" data-tab="tab-insert">Insert</button>
+    <button class="tab-btn" data-tab="tab-matrix">Matrix</button>
+    <button class="tab-btn" data-tab="tab-style">Font &amp; Style</button>
+    <button class="tab-btn" data-tab="tab-color">Colors</button>
+    <button class="tab-btn" data-tab="tab-edit">Edit</button>
+  </nav>
+
+  <!-- 1. Insert Panel -->
+  <div id="tab-insert" class="ribbon-panel active">
+    <!-- Basic structures -->
+    <button class="tool-btn" data-cmd="insert" data-arg="\frac{#?}{#?}" title="Fraction: a/b">a/b</button>
+    <button class="tool-btn" data-cmd="insert" data-arg="#?^{#?}" title="Power: x^y">xʸ</button>
     <button class="tool-btn" data-cmd="insert" data-arg="#?_{#?}" title="Subscript: x_y">xᵧ</button>
-    <button class="tool-btn" data-cmd="insert" data-arg="\sqrt{#?}" title="Square Root: \sqrt{x}">√x</button>
-    <button class="tool-btn" data-cmd="insert" data-arg="\sqrt[#?]{#?}" title="N-th Root: \sqrt[n]{x}">ⁿ√x</button>
+    <button class="tool-btn" data-cmd="insert" data-arg="\sqrt{#?}" title="Square Root: √x">√x</button>
+    <button class="tool-btn" data-cmd="insert" data-arg="\sqrt[#?]{#?}" title="N-th Root: ⁿ√x">ⁿ√x</button>
     
     <div class="tool-divider"></div>
 
+    <!-- Delimiters -->
     <button class="tool-btn" data-cmd="insert" data-arg="\left( #? \right)" title="Parentheses: ( )">(·)</button>
-    <button class="tool-btn" data-cmd="insert" data-arg="\int_{#?}^{#?} #? \,d#?" title="Definite Integral">∫</button>
-    <button class="tool-btn" data-cmd="insert" data-arg="\sum_{#?}^{#?} #?" title="Summation">∑</button>
-    <button class="tool-btn" data-cmd="insert" data-arg="\lim_{#? \to #?} #?" title="Limit">lim</button>
-    <button class="tool-btn" data-cmd="insert" data-arg="\begin{pmatrix} #? & #? \\ #? & #? \end{pmatrix}" title="2x2 Matrix">[M]</button>
+    <button class="tool-btn" data-cmd="insert" data-arg="\left[ #? \right]" title="Brackets: [ ]">[·]</button>
+    <button class="tool-btn" data-cmd="insert" data-arg="\left\{ #? \right\}" title="Braces: { }">{·}</button>
+    <button class="tool-btn" data-cmd="insert" data-arg="\left| #? \right|" title="Absolute value: | |">|·|</button>
 
     <div class="tool-divider"></div>
 
-    <button class="tool-btn" data-cmd="insert" data-arg="\pm" title="Plus-Minus: \pm">±</button>
-    <button class="tool-btn" data-cmd="insert" data-arg="\times" title="Multiplication: \times">×</button>
-    <button class="tool-btn" data-cmd="insert" data-arg="\div" title="Division: \div">÷</button>
-    <button class="tool-btn" data-cmd="insert" data-arg="\neq" title="Not Equal: \neq">≠</button>
-    <button class="tool-btn" data-cmd="insert" data-arg="\leq" title="Less than or equal: \leq">≤</button>
-    <button class="tool-btn" data-cmd="insert" data-arg="\geq" title="Greater than or equal: \geq">≥</button>
-    <button class="tool-btn" data-cmd="insert" data-arg="\pi" title="Pi: \pi">π</button>
-    <button class="tool-btn" data-cmd="insert" data-arg="\theta" title="Theta: \theta">θ</button>
-    <button class="tool-btn" data-cmd="insert" data-arg="\infty" title="Infinity: \infty">∞</button>
+    <!-- Calculus -->
+    <button class="tool-btn" data-cmd="insert" data-arg="\int_{#?}^{#?} #? \,d#?" title="Definite Integral">∫</button>
+    <button class="tool-btn" data-cmd="insert" data-arg="\sum_{#?}^{#?} #?" title="Summation">∑</button>
+    <button class="tool-btn" data-cmd="insert" data-arg="\prod_{#?}^{#?} #?" title="Product">∏</button>
+    <button class="tool-btn" data-cmd="insert" data-arg="\lim_{#? \to #?} #?" title="Limit">lim</button>
+
+    <div class="tool-divider"></div>
+
+    <!-- Symbols -->
+    <button class="tool-btn" data-cmd="insert" data-arg="\pm" title="Plus-Minus: ±">±</button>
+    <button class="tool-btn" data-cmd="insert" data-arg="\times" title="Multiplication: ×">×</button>
+    <button class="tool-btn" data-cmd="insert" data-arg="\div" title="Division: ÷">÷</button>
+    <button class="tool-btn" data-cmd="insert" data-arg="\neq" title="Not Equal: ≠">≠</button>
+    <button class="tool-btn" data-cmd="insert" data-arg="\leq" title="Less than or equal: ≤">≤</button>
+    <button class="tool-btn" data-cmd="insert" data-arg="\geq" title="Greater than or equal: ≥">≥</button>
+    <button class="tool-btn" data-cmd="insert" data-arg="\approx" title="Approximately: ≈">≈</button>
+    <button class="tool-btn" data-cmd="insert" data-arg="\infty" title="Infinity: ∞">∞</button>
+    <button class="tool-btn" data-cmd="insert" data-arg="\pi" title="Pi: π">π</button>
+    <button class="tool-btn" data-cmd="insert" data-arg="\theta" title="Theta: θ">θ</button>
+  </div>
+
+  <!-- 2. Matrix Panel (Moved from Burger Menu) -->
+  <div id="tab-matrix" class="ribbon-panel">
+    <span class="panel-label">Presets:</span>
+    <button class="tool-btn tool-btn-labeled" data-cmd="insert" data-arg="\begin{pmatrix} #? & #? \\ #? & #? \end{pmatrix}" title="2x2 Matrix">2×2 ( )</button>
+    <button class="tool-btn tool-btn-labeled" data-cmd="insert" data-arg="\begin{pmatrix} #? & #? & #? \\ #? & #? & #? \\ #? & #? & #? \end{pmatrix}" title="3x3 Matrix">3×3 ( )</button>
+    <button class="tool-btn tool-btn-labeled" data-cmd="insert" data-arg="\begin{bmatrix} #? & #? \\ #? & #? \end{bmatrix}" title="Bracket Matrix [M]">2×2 [ ]</button>
+    <button class="tool-btn tool-btn-labeled" data-cmd="insert" data-arg="\begin{vmatrix} #? & #? \\ #? & #? \end{vmatrix}" title="Determinant |M|">2×2 | |</button>
+    <button class="tool-btn tool-btn-labeled" data-cmd="insert" data-arg="\begin{pmatrix} #? & #? \end{pmatrix}" title="Row Vector">1×2 Row</button>
+    <button class="tool-btn tool-btn-labeled" data-cmd="insert" data-arg="\begin{pmatrix} #? \\ #? \end{pmatrix}" title="Column Vector">2×1 Col</button>
+
+    <div class="tool-divider"></div>
+
+    <span class="panel-label">Modify Matrix:</span>
+    <button class="tool-btn tool-btn-labeled" data-action="addRowAfter" title="Add Row Below">+ Row</button>
+    <button class="tool-btn tool-btn-labeled" data-action="addColumnAfter" title="Add Column Right">+ Col</button>
+    <button class="tool-btn tool-btn-labeled" data-action="removeRow" title="Delete Current Row">− Row</button>
+    <button class="tool-btn tool-btn-labeled" data-action="removeColumn" title="Delete Current Column">− Col</button>
+  </div>
+
+  <!-- 3. Font & Style Panel (Moved from Burger Menu) -->
+  <div id="tab-style" class="ribbon-panel">
+    <span class="panel-label">Font Styles:</span>
+    <button class="tool-btn tool-btn-labeled" data-cmd="insert" data-arg="\mathbf{#?}" title="Bold: \mathbf{x}"><b>Bold</b></button>
+    <button class="tool-btn tool-btn-labeled" data-cmd="insert" data-arg="\mathit{#?}" title="Italic: \mathit{x}"><i>Italic</i></button>
+    <button class="tool-btn tool-btn-labeled" data-cmd="insert" data-arg="\mathrm{#?}" title="Roman (Regular): \mathrm{x}">Roman</button>
+    <button class="tool-btn tool-btn-labeled" data-cmd="insert" data-arg="\mathbb{#?}" title="Blackboard Bold: \mathbb{R}">Double-Struck ℝ</button>
+    <button class="tool-btn tool-btn-labeled" data-cmd="insert" data-arg="\mathcal{#?}" title="Calligraphic: \mathcal{L}">Script ℒ</button>
+    <button class="tool-btn tool-btn-labeled" data-cmd="insert" data-arg="\mathfrak{#?}" title="Fraktur: \mathfrak{X}">Fraktur 𝔛</button>
+
+    <div class="tool-divider"></div>
+
+    <span class="panel-label">Mode:</span>
+    <button class="tool-btn tool-btn-labeled" data-cmd="insert" data-arg="\text{#?}" title="Plain Text in Equation">"Text Mode"</button>
+  </div>
+
+  <!-- 4. Colors Panel (Moved from Burger Menu) -->
+  <div id="tab-color" class="ribbon-panel">
+    <span class="panel-label">Text Color:</span>
+    <button class="color-swatch" data-color="#000000" style="background: #000000;" title="Default Black"></button>
+    <button class="color-swatch" data-color="#185abd" style="background: #185abd;" title="Blue"></button>
+    <button class="color-swatch" data-color="#d83b01" style="background: #d83b01;" title="Red"></button>
+    <button class="color-swatch" data-color="#107c10" style="background: #107c10;" title="Green"></button>
+    <button class="color-swatch" data-color="#5c2d91" style="background: #5c2d91;" title="Purple"></button>
+    <button class="color-swatch" data-color="#d13438" style="background: #d13438;" title="Crimson"></button>
+
+    <div class="tool-divider"></div>
+
+    <span class="panel-label">Background Highlight:</span>
+    <button class="tool-btn tool-btn-labeled" data-bgcolor="transparent" title="No Background">None</button>
+    <button class="tool-btn tool-btn-labeled" data-bgcolor="#fff4ce" style="background: #fff4ce;" title="Yellow Highlight">Yellow</button>
+    <button class="tool-btn tool-btn-labeled" data-bgcolor="#c7e0f4" style="background: #c7e0f4;" title="Blue Highlight">Blue</button>
+    <button class="tool-btn tool-btn-labeled" data-bgcolor="#dff6dd" style="background: #dff6dd;" title="Green Highlight">Green</button>
+    <button class="tool-btn tool-btn-labeled" data-bgcolor="#fde7e9" style="background: #fde7e9;" title="Pink Highlight">Pink</button>
+  </div>
+
+  <!-- 5. Edit Panel (Moved from Burger Menu: Cut, Copy, Paste, Select All) -->
+  <div id="tab-edit" class="ribbon-panel">
+    <button class="tool-btn tool-btn-labeled" data-action="undo" title="Undo (Ctrl+Z)">↶ Undo</button>
+    <button class="tool-btn tool-btn-labeled" data-action="redo" title="Redo (Ctrl+Y)">↷ Redo</button>
+    
+    <div class="tool-divider"></div>
+
+    <button class="tool-btn tool-btn-labeled" data-action="cutToClipboard" title="Cut (Ctrl+X)">✂ Cut</button>
+    <button class="tool-btn tool-btn-labeled" data-action="copyToClipboard" title="Copy (Ctrl+C)">⎘ Copy</button>
+    <button class="tool-btn tool-btn-labeled" data-action="pasteFromClipboard" title="Paste (Ctrl+V)">📋 Paste</button>
+
+    <div class="tool-divider"></div>
+
+    <button class="tool-btn tool-btn-labeled" data-action="selectAll" title="Select All (Ctrl+A)">Select All</button>
+    <button class="tool-btn tool-btn-labeled" data-action="deleteAll" title="Clear Field">Clear All</button>
   </div>
 
   <!-- Main MathLive Canvas -->
   <main>
     <div class="editor-label">
-      <span>Visual Math Editor</span>
+      <span>Visual Math Canvas</span>
       <span style="font-weight: normal; text-transform: none;">Click or tap to edit visually</span>
     </div>
 
-    <!-- MathLive Web Component -->
+    <!-- MathLive Web Component (Burger toggle hidden via CSS) -->
     <math-field id="mathField" smart-mode="true" virtual-keyboard-mode="manual"></math-field>
 
     <!-- Synchronized LaTeX view -->
@@ -305,13 +481,10 @@
 
   <!-- Dialog Footer -->
   <footer>
-    <button id="btnToggleKeyboard" class="btn-kbd">⌨ Virtual Keyboard</button>
-    <div class="actions-right">
-      <button id="btnCancel" class="btn btn-secondary">Cancel</button>
-      <button id="btnInsert" class="btn btn-primary">
-        <span id="btnInsertText">Insert into Document</span>
-      </button>
-    </div>
+    <button id="btnCancel" class="btn btn-secondary">Cancel</button>
+    <button id="btnInsert" class="btn btn-primary">
+      <span id="btnInsertText">Insert into Document</span>
+    </button>
   </footer>
 
   <script>
@@ -332,7 +505,7 @@
     }
 
     /**
-     * Send message back to the Task Pane Hub via Office Dialog API
+     * Send message back to Task Pane Hub via Office Dialog API
      */
     function sendToParent(action, latex = '') {
       if (typeof Office !== 'undefined' && Office.context && Office.context.ui && Office.context.ui.messageParent) {
@@ -341,14 +514,97 @@
           latex: latex
         }));
       } else {
-        console.warn('Office.context.ui.messageParent is not available. Running standalone?');
+        console.warn('Office.context.ui.messageParent is not available.');
       }
     }
+
+    /**
+     * Initialize Ribbon Tabs switching
+     */
+    document.querySelectorAll('.tab-btn').forEach(tabBtn => {
+      tabBtn.addEventListener('click', () => {
+        // Deactivate all tabs and panels
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.ribbon-panel').forEach(p => p.classList.remove('active'));
+
+        // Activate clicked tab and matching panel
+        tabBtn.classList.add('active');
+        const targetId = tabBtn.dataset.tab;
+        const panel = document.getElementById(targetId);
+        if (panel) panel.classList.add('active');
+      });
+    });
+
+    /**
+     * Command Buttons (Insert commands)
+     */
+    document.querySelectorAll('.tool-btn[data-cmd]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const cmd = btn.dataset.cmd;
+        const arg = btn.dataset.arg;
+        if (cmd && arg) {
+          mathField.executeCommand([cmd, arg]);
+          mathField.focus();
+          updateLatexDisplay();
+        }
+      });
+    });
+
+    /**
+     * Action Buttons (Matrix & Edit operations: addRow, cut, copy, paste, etc.)
+     */
+    document.querySelectorAll('.tool-btn[data-action]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const action = btn.dataset.action;
+        if (action) {
+          mathField.executeCommand(action);
+          mathField.focus();
+          updateLatexDisplay();
+        }
+      });
+    });
+
+    /**
+     * Text Color Swatches
+     */
+    document.querySelectorAll('.color-swatch[data-color]').forEach(swatch => {
+      swatch.addEventListener('click', () => {
+        const color = swatch.dataset.color;
+        mathField.executeCommand(['applyStyle', { color: color }]);
+        mathField.focus();
+        updateLatexDisplay();
+      });
+    });
+
+    /**
+     * Background Color Swatches
+     */
+    document.querySelectorAll('[data-bgcolor]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const bgColor = btn.dataset.bgcolor;
+        mathField.executeCommand(['applyStyle', { backgroundColor: bgColor }]);
+        mathField.focus();
+        updateLatexDisplay();
+      });
+    });
+
+    /**
+     * Virtual keyboard toggle
+     */
+    btnToggleKeyboard.addEventListener('click', () => {
+      mathField.executeCommand(['toggleVirtualKeyboard']);
+      mathField.focus();
+    });
 
     /**
      * Initialize on Office.onReady
      */
     Office.onReady(() => {
+      // Remove any default menuItems to ensure burger never shows up
+      try {
+        mathField.menuItems = [];
+      } catch (_) {}
+
       // Parse LaTeX passed from Task Pane through URL parameters
       const urlParams = new URLSearchParams(window.location.search);
       const initialLatex = urlParams.get('latex');
@@ -372,27 +628,8 @@
       }, 200);
     });
 
-    // Event listener for MathLive changes
+    // Event listener for MathLive input changes
     mathField.addEventListener('input', updateLatexDisplay);
-
-    // Toolbar template buttons
-    document.querySelectorAll('.tool-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const cmd = btn.dataset.cmd;
-        const arg = btn.dataset.arg;
-        if (cmd && arg) {
-          mathField.executeCommand([cmd, arg]);
-          mathField.focus();
-          updateLatexDisplay();
-        }
-      });
-    });
-
-    // Virtual keyboard toggle
-    btnToggleKeyboard.addEventListener('click', () => {
-      mathField.executeCommand(['toggleVirtualKeyboard']);
-      mathField.focus();
-    });
 
     // Insert button click
     btnInsert.addEventListener('click', () => {
@@ -405,7 +642,7 @@
       sendToParent('cancel');
     });
 
-    // Enter key submits equation (Ctrl+Enter or Cmd+Enter)
+    // Keyboard shortcuts
     window.addEventListener('keydown', (e) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
         e.preventDefault();
