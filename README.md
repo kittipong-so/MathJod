@@ -1,4 +1,4 @@
-# MathType Clone - Microsoft Word Task Pane Add-in
+# Microsoft Word Task Pane Add-in for Math Equations
 
 A client-side Microsoft Word Task Pane Add-in that allows users to type standard LaTeX mathematical equations, view real-time rendering previews via KaTeX, and insert them directly into Microsoft Word documents as native, fully-editable Word equations (OMML).
 
