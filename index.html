@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title>MathType Clone - LaTeX Equation Editor</title>
+
+  <!-- Office JavaScript API -->
+  <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+
+  <!-- KaTeX for high-performance LaTeX preview rendering -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" integrity="sha384-n8MVd4RsNIU0tAv4ct0nTaAbDJwPJzDEaqSD1odI+WdtXRGWt2kTvGFasHpSy3SV" crossorigin="anonymous">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" integrity="sha384-XjKyOOlGwcjNTAIQHIpgOno0Hl1YQqzUOEleOLALmuqehneUG+vnGctmUb0ZY0l8" crossorigin="anonymous"></script>
+
+  <style>
+    :root {
+      --primary: #185abd;
+      --primary-hover: #11499c;
+      --primary-active: #0c3875;
+      --bg: #ffffff;
+      --surface: #f8f9fa;
+      --border: #e1dfdd;
+      --border-focus: #185abd;
+      --text: #242424;
+      --text-secondary: #616161;
+      --error-bg: #fde7e9;
+      --error-text: #a80000;
+      --success-bg: #dff6dd;
+      --success-text: #107c10;
+      --radius: 6px;
+      --font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font-family);
+      font-size: 13px;
+      color: var(--text);
+      background-color: var(--bg);
+      line-height: 1.4;
+      padding: 12px;
+      user-select: none;
+    }
+
+    /* Header */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: 10px;
+      margin-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .header-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--primary);
+    }
+
+    .header-title svg {
+      width: 20px;
+      height: 20px;
+      fill: currentColor;
+    }
+
+    .badge {
+      font-size: 11px;
+      padding: 2px 7px;
+      border-radius: 10px;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .badge-online {
+      background-color: #dff6dd;
+      color: #107c10;
+    }
+
+    .badge-offline {
+      background-color: #fff4ce;
+      color: #797775;
+    }
+
+    .badge .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background-color: currentColor;
+    }
+
+    /* Math Palette Toolbar */
+    .palette-section {
+      margin-bottom: 10px;
+    }
+
+    .section-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .palette-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 4px;
+      background-color: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 6px;
+    }
+
+    .math-btn {
+      appearance: none;
+      border: 1px solid var(--border);
+      background: #ffffff;
+      color: var(--text);
+      font-family: 'Cambria Math', 'KaTeX_Main', serif;
+      font-size: 13px;
+      height: 30px;
+      border-radius: 4px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s ease;
+      user-select: none;
+    }
+
+    .math-btn:hover {
+      background: #eef4fc;
+      border-color: var(--primary);
+      color: var(--primary);
+      transform: translateY(-1px);
+    }
+
+    .math-btn:active {
+      transform: translateY(0);
+      background: #dbe7f9;
+    }
+
+    /* Presets dropdown */
+    .presets-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .select-input {
+      flex: 1;
+      height: 28px;
+      font-size: 12px;
+      font-family: inherit;
+      padding: 2px 8px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      background: white;
+      color: var(--text);
+      cursor: pointer;
+    }
+
+    .select-input:focus {
+      outline: none;
+      border-color: var(--border-focus);
+    }
+
+    .btn-secondary {
+      height: 28px;
+      padding: 0 10px;
+      font-size: 12px;
+      font-family: inherit;
+      border: 1px solid var(--border);
+      background: white;
+      color: var(--text);
+      border-radius: 4px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: background 0.15s;
+    }
+
+    .btn-secondary:hover {
+      background: #f3f2f1;
+    }
+
+    /* LaTeX Input Area */
+    .input-section {
+      margin-bottom: 10px;
+    }
+
+    .latex-textarea {
+      width: 100%;
+      height: 75px;
+      font-family: 'Consolas', 'Courier New', monospace;
+      font-size: 13px;
+      line-height: 1.4;
+      padding: 8px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      resize: vertical;
+      color: var(--text);
+      background-color: #ffffff;
+      outline: none;
+      transition: border-color 0.15s;
+      user-select: text;
+    }
+
+    .latex-textarea:focus {
+      border-color: var(--border-focus);
+      box-shadow: 0 0 0 1px var(--border-focus);
+    }
+
+    /* Format Options (Inline vs Display) */
+    .options-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 10px;
+      font-size: 12px;
+      padding: 4px 2px;
+    }
+
+    .radio-label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .radio-label input[type="radio"] {
+      cursor: pointer;
+      accent-color: var(--primary);
+    }
+
+    /* Preview Section */
+    .preview-section {
+      margin-bottom: 14px;
+    }
+
+    .preview-box {
+      min-height: 70px;
+      max-height: 140px;
+      overflow-x: auto;
+      overflow-y: auto;
+      background-color: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+
+    .preview-placeholder {
+      color: var(--text-secondary);
+      font-style: italic;
+      font-size: 12px;
+    }
+
+    .error-box {
+      display: none;
+      margin-top: 6px;
+      padding: 6px 10px;
+      font-size: 11px;
+      background-color: var(--error-bg);
+      color: var(--error-text);
+      border-radius: 4px;
+      word-break: break-word;
+    }
+
+    /* Primary Insert Button */
+    .action-section {
+      margin-bottom: 12px;
+    }
+
+    .btn-primary {
+      width: 100%;
+      height: 38px;
+      background-color: var(--primary);
+      color: #ffffff;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+      transition: all 0.15s ease;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background-color: var(--primary-hover);
+      transform: translateY(-1px);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+    }
+
+    .btn-primary:active:not(:disabled) {
+      background-color: var(--primary-active);
+      transform: translateY(0);
+    }
+
+    .btn-primary:disabled {
+      background-color: #c8c6c4;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    .btn-primary svg {
+      width: 16px;
+      height: 16px;
+      fill: currentColor;
+    }
+
+    /* Notification message */
+    .status-banner {
+      display: none;
+      padding: 8px 12px;
+      border-radius: var(--radius);
+      font-size: 12px;
+      margin-bottom: 12px;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .status-banner.success {
+      background-color: var(--success-bg);
+      color: var(--success-text);
+      border: 1px solid #c3e6cb;
+    }
+
+    .status-banner.error {
+      background-color: var(--error-bg);
+      color: var(--error-text);
+      border: 1px solid #f5c6cb;
+    }
+
+    /* Instructions & Info accordion */
+    .details-card {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 8px 10px;
+      background: var(--surface);
+      font-size: 11px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    .details-card summary {
+      cursor: pointer;
+      font-weight: 600;
+      color: var(--text);
+      outline: none;
+    }
+
+    .details-card ol {
+      padding-left: 18px;
+      margin-top: 6px;
+    }
+
+    .details-card li {
+      margin-bottom: 4px;
+    }
+
+    .details-card code {
+      background: #e1dfdd;
+      padding: 1px 4px;
+      border-radius: 3px;
+      font-family: Consolas, monospace;
+    }
+
+    /* Spinner for loading state */
+    .spinner {
+      display: none;
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(255, 255, 255, 0.4);
+      border-top-color: #ffffff;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="header">
+    <div class="header-title">
+      <!-- Sigma / Math Icon -->
+      <svg viewBox="0 0 24 24">
+        <path d="M18 4H6v2l6 6-6 6v2h12v-3h-7.5l4.5-4.5-4.5-4.5H18V4z"/>
+      </svg>
+      <span>MathType</span>
+    </div>
+    <div id="wordStatusBadge" class="badge badge-offline">
+      <span class="dot"></span>
+      <span id="wordStatusText">Initializing...</span>
+    </div>
+  </header>
+
+  <!-- Math Symbol Palette (Quick Insert) -->
+  <section class="palette-section">
+    <div class="section-label">
+      <span>Symbol Palette</span>
+    </div>
+    <div class="palette-grid">
+      <!-- Templates -->
+      <button class="math-btn" data-latex="\frac{a}{b}" title="Fraction: \frac{a}{b}">a/b</button>
+      <button class="math-btn" data-latex="x^{2}" title="Power: x^{2}">x²</button>
+      <button class="math-btn" data-latex="x_{1}" title="Subscript: x_{1}">x₁</button>
+      <button class="math-btn" data-latex="\sqrt{x}" title="Square Root: \sqrt{x}">√x</button>
+      <button class="math-btn" data-latex="\sqrt[n]{x}" title="N-th Root: \sqrt[n]{x}">ⁿ√x</button>
+      <button class="math-btn" data-latex="\int_{a}^{b} x \,dx" title="Definite Integral">∫dx</button>
+      
+      <button class="math-btn" data-latex="\sum_{i=1}^{n} x_i" title="Summation: \sum">∑</button>
+      <button class="math-btn" data-latex="\prod_{i=1}^{n} x_i" title="Product: \prod">∏</button>
+      <button class="math-btn" data-latex="\lim_{x \to \infty}" title="Limit: \lim">lim</button>
+      <button class="math-btn" data-latex="\left( \frac{a}{b} \right)" title="Parentheses: \left( \right)">(·)</button>
+      <button class="math-btn" data-latex="\begin{pmatrix} a & b \\ c & d \end{pmatrix}" title="Matrix 2x2">[M]</button>
+      <button class="math-btn" data-latex="\partial" title="Partial Derivative">∂</button>
+
+      <!-- Greek & Operators -->
+      <button class="math-btn" data-latex="\pm" title="Plus-Minus: \pm">±</button>
+      <button class="math-btn" data-latex="\times" title="Multiplication: \times">×</button>
+      <button class="math-btn" data-latex="\div" title="Division: \div">÷</button>
+      <button class="math-btn" data-latex="\neq" title="Not Equal: \neq">≠</button>
+      <button class="math-btn" data-latex="\leq" title="Less than or equal: \leq">≤</button>
+      <button class="math-btn" data-latex="\geq" title="Greater than or equal: \geq">≥</button>
+
+      <button class="math-btn" data-latex="\approx" title="Approximately: \approx">≈</button>
+      <button class="math-btn" data-latex="\infty" title="Infinity: \infty">∞</button>
+      <button class="math-btn" data-latex="\alpha" title="Alpha: \alpha">α</button>
+      <button class="math-btn" data-latex="\beta" title="Beta: \beta">β</button>
+      <button class="math-btn" data-latex="\pi" title="Pi: \pi">π</button>
+      <button class="math-btn" data-latex="\theta" title="Theta: \theta">θ</button>
+    </div>
+  </section>
+
+  <!-- Presets & Quick Tools -->
+  <div class="presets-row">
+    <select id="presetSelect" class="select-input" title="Select a formula template">
+      <option value="" disabled selected>-- Formula Examples --</option>
+      <option value="x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}">Quadratic Formula</option>
+      <option value="e^{i\pi} + 1 = 0">Euler's Identity</option>
+      <option value="\int_{-\infty}^{\infty} e^{-x^2} dx = \sqrt{\pi}">Gaussian Integral</option>
+      <option value="f(x) = \frac{1}{\sigma \sqrt{2\pi}} e^{-\frac{1}{2}\left(\frac{x - \mu}{\sigma}\right)^2}">Normal Distribution</option>
+      <option value="\sum_{n=1}^{\infty} \frac{1}{n^2} = \frac{\pi^2}{6}">Basel Problem</option>
+      <option value="\begin{bmatrix} \cos\theta & -\sin\theta \\ \sin\theta & \cos\theta \end{bmatrix}">Rotation Matrix</option>
+      <option value="A = \pi r^2">Area of Circle</option>
+    </select>
+    <button id="btnClear" class="btn-secondary" title="Clear equation">Clear</button>
+  </div>
+
+  <!-- LaTeX Equation Input -->
+  <section class="input-section">
+    <div class="section-label">
+      <span>LaTeX Input</span>
+      <span style="font-weight: normal; text-transform: none;">Supports standard TeX math</span>
+    </div>
+    <textarea
+      id="latexInput"
+      class="latex-textarea"
+      placeholder="Type or paste LaTeX equation, e.g. \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}"
+      spellcheck="false"
+      autocomplete="off"
+    ></textarea>
+  </section>
+
+  <!-- Formatting Options -->
+  <div class="options-row">
+    <span style="font-weight: 600; color: var(--text-secondary);">Mode:</span>
+    <label class="radio-label">
+      <input type="radio" name="mathMode" value="display" checked>
+      <span>Display (Centered block)</span>
+    </label>
+    <label class="radio-label">
+      <input type="radio" name="mathMode" value="inline">
+      <span>Inline (In-text)</span>
+    </label>
+  </div>
+
+  <!-- Live KaTeX Preview -->
+  <section class="preview-section">
+    <div class="section-label">
+      <span>Live Preview</span>
+    </div>
+    <div id="previewContainer" class="preview-box">
+      <span class="preview-placeholder">Live preview will appear here...</span>
+    </div>
+    <div id="errorContainer" class="error-box"></div>
+  </section>
+
+  <!-- Main Action Button -->
+  <section class="action-section">
+    <button id="btnInsert" class="btn-primary" disabled>
+      <span id="insertSpinner" class="spinner"></span>
+      <!-- Insert / Word Icon -->
+      <svg id="insertIcon" viewBox="0 0 24 24">
+        <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+      </svg>
+      <span id="insertBtnText">Insert into Word</span>
+    </button>
+  </section>
+
+  <!-- Notification Banner -->
+  <div id="statusBanner" class="status-banner"></div>
+
+  <!-- Quick Setup & Usage Help -->
+  <details class="details-card">
+    <summary>Instructions &amp; GitHub Pages Hosting</summary>
+    <ol>
+      <li>Host these files (<code>manifest.xml</code>, <code>index.html</code>, <code>app.js</code>) on GitHub Pages.</li>
+      <li>In <code>manifest.xml</code>, replace <code>https://YOUR-GITHUB-USERNAME.github.io/YOUR-REPO-NAME/</code> with your live URL.</li>
+      <li>In Word desktop, go to <b>Insert &gt; Add-ins &gt; My Add-ins &gt; Shared Folder</b> (or sideload via Word for Web developer add-ins).</li>
+      <li>Click the <b>Math Equation</b> button in Word's ribbon to launch this task pane.</li>
+    </ol>
+  </details>
+
+  <!-- Application Logic -->
+  <script type="module" src="app.js"></script>
+</body>
+</html>

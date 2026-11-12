@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<OfficeApp
+  xmlns="http://schemas.microsoft.com/office/appforoffice/1.1"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0"
+  xmlns:ov="http://schemas.microsoft.com/office/taskpaneappversionoverrides"
+  xsi:type="TaskPaneApp">
+
+  <!-- Unique Add-in ID (GUID) -->
+  <Id>2d187ce6-9904-4b53-b9df-7414df9cf21e</Id>
+  <Version>1.0.0.0</Version>
+  <ProviderName>Personal MathType</ProviderName>
+  <DefaultLocale>en-US</DefaultLocale>
+  <DisplayName DefaultValue="MathType Clone" />
+  <Description DefaultValue="LaTeX equation editor for Microsoft Word with live KaTeX preview and native editable equation insertion." />
+  
+  <!-- Icon URLs (replace with your GitHub Pages URL) -->
+  <IconUrl DefaultValue="https://YOUR-GITHUB-USERNAME.github.io/YOUR-REPO-NAME/assets/icon-32.png" />
+  <HighResolutionIconUrl DefaultValue="https://YOUR-GITHUB-USERNAME.github.io/YOUR-REPO-NAME/assets/icon-80.png" />
+  <SupportUrl DefaultValue="https://YOUR-GITHUB-USERNAME.github.io/YOUR-REPO-NAME" />
+
+  <!-- Allowed domains -->
+  <AppDomains>
+    <AppDomain>https://YOUR-GITHUB-USERNAME.github.io</AppDomain>
+    <AppDomain>https://cdn.jsdelivr.net</AppDomain>
+    <AppDomain>https://unpkg.com</AppDomain>
+  </AppDomains>
+
+  <Hosts>
+    <Host Name="Document" />
+  </Hosts>
+
+  <DefaultSettings>
+    <SourceLocation DefaultValue="https://YOUR-GITHUB-USERNAME.github.io/YOUR-REPO-NAME/index.html" />
+  </DefaultSettings>
+
+  <!-- ReadWriteDocument permission is required to insert OOXML equations -->
+  <Permissions>ReadWriteDocument</Permissions>
+
+  <!-- Modern Office Ribbon Definition -->
+  <VersionOverrides xmlns="http://schemas.microsoft.com/office/taskpaneappversionoverrides" xsi:type="VersionOverridesV1_0">
+    <Hosts>
+      <Host xsi:type="Document">
+        <DesktopFormFactor>
+          <GetStarted>
+            <Title resid="GetStarted.Title"/>
+            <Description resid="GetStarted.Description"/>
+            <LearnMoreUrl resid="GetStarted.LearnMoreUrl"/>
+          </GetStarted>
+          
+          <FunctionFile resid="Taskpane.Url" />
+
+          <!-- Add MathType button into the Insert Tab on Word ribbon -->
+          <ExtensionPoint xsi:type="PrimaryCommandSurface">
+            <OfficeTab id="TabInsert">
+              <Group id="MathType.Group">
+                <Label resid="GroupMath.Label" />
+                <Icon>
+                  <bt:Image size="16" resid="Icon.16" />
+                  <bt:Image size="32" resid="Icon.32" />
+                  <bt:Image size="80" resid="Icon.80" />
+                </Icon>
+
+                <Control xsi:type="Button" id="MathType.TaskpaneButton">
+                  <Label resid="ButtonMath.Label" />
+                  <Supertip>
+                    <Title resid="ButtonMath.Label" />
+                    <Description resid="ButtonMath.Tooltip" />
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="Icon.16" />
+                    <bt:Image size="32" resid="Icon.32" />
+                    <bt:Image size="80" resid="Icon.80" />
+                  </Icon>
+                  <Action xsi:type="ShowTaskpane">
+                    <TaskpaneId>MathTypeTaskpane</TaskpaneId>
+                    <SourceLocation resid="Taskpane.Url" />
+                  </Action>
+                </Control>
+              </Group>
+            </OfficeTab>
+          </ExtensionPoint>
+        </DesktopFormFactor>
+      </Host>
+    </Hosts>
+
+    <Resources>
+      <bt:Images>
+        <bt:Image id="Icon.16" DefaultValue="https://YOUR-GITHUB-USERNAME.github.io/YOUR-REPO-NAME/assets/icon-16.png" />
+        <bt:Image id="Icon.32" DefaultValue="https://YOUR-GITHUB-USERNAME.github.io/YOUR-REPO-NAME/assets/icon-32.png" />
+        <bt:Image id="Icon.80" DefaultValue="https://YOUR-GITHUB-USERNAME.github.io/YOUR-REPO-NAME/assets/icon-80.png" />
+      </bt:Images>
+      <bt:Urls>
+        <bt:Url id="GetStarted.LearnMoreUrl" DefaultValue="https://YOUR-GITHUB-USERNAME.github.io/YOUR-REPO-NAME" />
+        <bt:Url id="Taskpane.Url" DefaultValue="https://YOUR-GITHUB-USERNAME.github.io/YOUR-REPO-NAME/index.html" />
+      </bt:Urls>
+      <bt:ShortStrings>
+        <bt:String id="GetStarted.Title" DefaultValue="MathType Clone" />
+        <bt:String id="GroupMath.Label" DefaultValue="MathType" />
+        <bt:String id="ButtonMath.Label" DefaultValue="Math Equation" />
+      </bt:ShortStrings>
+      <bt:LongStrings>
+        <bt:String id="GetStarted.Description" DefaultValue="Insert editable LaTeX math equations directly into Word documents." />
+        <bt:String id="ButtonMath.Tooltip" DefaultValue="Opens the MathType LaTeX equation editor task pane." />
+      </bt:LongStrings>
+    </Resources>
+  </VersionOverrides>
+</OfficeApp>
